@@ -41,25 +41,39 @@ OPTIONAL_COLLISION_LABELS = [
     "junction_detail_label",
     "first_road_class_label",
 ]
+PREBUILT_VIEW_REQUIRED_COLUMNS = {
+    "collision_view": [
+        "collision_index",
+        "fatal_casualties",
+        "serious_casualties",
+        "slight_casualties",
+        "adjusted_serious_casualties",
+        "adjusted_slight_casualties",
+    ],
+}
 
 
 def _prebuilt_is_fresh(path, dataset_dir) -> bool:
-    """True if prebuilt parquet exists and is newer than source CSVs."""
+    """True if prebuilt parquet exists and is newer than all source and enrichment inputs."""
     from pathlib import Path
     p = Path(path) if not hasattr(path, "exists") else path
     if not p.exists():
         return False
     prebuilt_mtime = p.stat().st_mtime_ns
+    code_dir = Path(__file__).resolve().parent
     sources = [
-        "dft-road-casualty-statistics-collision-last-5-years.csv",
-        "dft-road-casualty-statistics-collision-provisional-2025.csv",
-        "dft-road-casualty-statistics-vehicle-last-5-years.csv",
-        "dft-road-casualty-statistics-vehicle-provisional-2025.csv",
-        "dft-road-casualty-statistics-casualty-last-5-years.csv",
-        "dft-road-casualty-statistics-casualty-provisional-2025.csv",
+        dataset_dir / "dft-road-casualty-statistics-collision-last-5-years.csv",
+        dataset_dir / "dft-road-casualty-statistics-collision-provisional-2025.csv",
+        dataset_dir / "dft-road-casualty-statistics-vehicle-last-5-years.csv",
+        dataset_dir / "dft-road-casualty-statistics-vehicle-provisional-2025.csv",
+        dataset_dir / "dft-road-casualty-statistics-casualty-last-5-years.csv",
+        dataset_dir / "dft-road-casualty-statistics-casualty-provisional-2025.csv",
+        dataset_dir / "Local_Authority_Districts_(April_2025)_Names_and_Codes_in_the_UK_v2.csv",
+        dataset_dir / "dft-road-casualty-statistics-road-safety-open-dataset-data-guide-2024.xlsx",
+        code_dir / "data_loading.py",
+        code_dir / "transforms.py",
     ]
-    for f in sources:
-        src = dataset_dir / f
+    for src in sources:
         if src.exists() and src.stat().st_mtime_ns > prebuilt_mtime:
             return False
     return True
@@ -73,7 +87,11 @@ def _try_load_prebuilt_view(name: str, cache_fingerprint: tuple) -> pd.DataFrame
     if not path.exists() or not _prebuilt_is_fresh(path, find_dataset_dir()):
         return None
     try:
-        return pd.read_parquet(path)
+        df = pd.read_parquet(path)
+        required_columns = PREBUILT_VIEW_REQUIRED_COLUMNS.get(name, [])
+        if required_columns and not has_required_columns(df, required_columns):
+            return None
+        return df
     except Exception:
         return None
 
@@ -358,6 +376,8 @@ def _build_cas_agg(casualties: pd.DataFrame) -> pd.DataFrame:
                 "fatal_casualties",
                 "serious_casualties",
                 "slight_casualties",
+                "adjusted_serious_casualties",
+                "adjusted_slight_casualties",
                 "avg_casualty_age",
             ]
         ).astype({"collision_index": "string"})
@@ -371,24 +391,31 @@ def _build_cas_agg(casualties: pd.DataFrame) -> pd.DataFrame:
         cas_agg_spec["casualties_total"] = (cas_tmp.columns[0], "count")
 
     if "casualty_severity" in cas_tmp.columns:
-        cas_tmp["_fatal_flag"] = (pd.to_numeric(cas_tmp["casualty_severity"], errors="coerce") == 1).astype(int)
+        severity = pd.to_numeric(cas_tmp["casualty_severity"], errors="coerce")
+        cas_tmp["_fatal_flag"] = (severity == 1).astype(int)
+        cas_tmp["_serious_flag"] = (severity == 2).astype(int)
+        cas_tmp["_slight_flag"] = (severity == 3).astype(int)
         cas_agg_spec["fatal_casualties"] = ("_fatal_flag", "sum")
+        cas_agg_spec["serious_casualties"] = ("_serious_flag", "sum")
+        cas_agg_spec["slight_casualties"] = ("_slight_flag", "sum")
     else:
         cas_agg_spec["fatal_casualties"] = (cas_tmp.columns[0], "count")
+        cas_agg_spec["serious_casualties"] = ("casualty_reference", "count")
+        cas_agg_spec["slight_casualties"] = ("casualty_reference", "count")
 
     if "casualty_adjusted_severity_serious" in cas_tmp.columns:
-        cas_agg_spec["serious_casualties"] = ("casualty_adjusted_severity_serious", "sum")
+        cas_agg_spec["adjusted_serious_casualties"] = ("casualty_adjusted_severity_serious", "sum")
     elif "casualty_reference" in cas_tmp.columns:
-        cas_agg_spec["serious_casualties"] = ("casualty_reference", "count")
+        cas_agg_spec["adjusted_serious_casualties"] = ("casualty_reference", "count")
     else:
-        cas_agg_spec["serious_casualties"] = (cas_tmp.columns[0], "count")
+        cas_agg_spec["adjusted_serious_casualties"] = (cas_tmp.columns[0], "count")
 
     if "casualty_adjusted_severity_slight" in cas_tmp.columns:
-        cas_agg_spec["slight_casualties"] = ("casualty_adjusted_severity_slight", "sum")
+        cas_agg_spec["adjusted_slight_casualties"] = ("casualty_adjusted_severity_slight", "sum")
     elif "casualty_reference" in cas_tmp.columns:
-        cas_agg_spec["slight_casualties"] = ("casualty_reference", "count")
+        cas_agg_spec["adjusted_slight_casualties"] = ("casualty_reference", "count")
     else:
-        cas_agg_spec["slight_casualties"] = (cas_tmp.columns[0], "count")
+        cas_agg_spec["adjusted_slight_casualties"] = (cas_tmp.columns[0], "count")
 
     if "age_of_casualty" in cas_tmp.columns:
         cas_agg_spec["avg_casualty_age"] = ("age_of_casualty", "mean")
@@ -427,6 +454,8 @@ def build_collision_view(cache_fingerprint: tuple) -> pd.DataFrame:
             fatal_casualties=lambda d: d["fatal_casualties"].fillna(0),
             serious_casualties=lambda d: d["serious_casualties"].fillna(0),
             slight_casualties=lambda d: d["slight_casualties"].fillna(0),
+            adjusted_serious_casualties=lambda d: d["adjusted_serious_casualties"].fillna(0.0),
+            adjusted_slight_casualties=lambda d: d["adjusted_slight_casualties"].fillna(0.0),
             pct_motorcycles=lambda d: d["pct_motorcycles"].fillna(0.0),
             fatal_or_serious_collision=lambda d: d["collision_severity"].isin([1, 2]).astype(int),
             has_car=lambda d: d["has_car"].fillna(0),

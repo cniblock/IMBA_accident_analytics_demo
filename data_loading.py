@@ -130,7 +130,9 @@ def get_lad_lookup() -> Dict[str, str]:
         if lookup_path.exists():
             lad_df = pd.read_csv(lookup_path, dtype="string", low_memory=False)
             if {"LAD25CD", "LAD25NM"}.issubset(set(lad_df.columns)):
-                fresh = lad_df.dropna().drop_duplicates(subset=["LAD25CD"], keep="last")
+                fresh = lad_df.dropna(subset=["LAD25CD", "LAD25NM"]).drop_duplicates(
+                    subset=["LAD25CD"], keep="last"
+                )
                 fresh["LAD25CD"] = fresh["LAD25CD"].astype("string").str.strip().str.upper()
                 lookup.update(dict(zip(fresh["LAD25CD"], fresh["LAD25NM"])))
     except Exception:

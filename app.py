@@ -1035,26 +1035,123 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
     speed_matrix_stats = _collision_level_serious_fatal_stats(
         vehicle_data, ["vehicle_type_label", "speed_limit"]
     )
-    speed_matrix = speed_matrix_stats[speed_matrix_stats["collisions"] >= 25].copy()
+    vehicle_type_order = [
+        "Car",
+        "Taxi/Private hire car",
+        "Van/Goods under 3.5t",
+        "Goods 3.5t to 7.5t",
+        "Goods over 7.5t",
+        "Bus/coach",
+        "Minibus",
+        "Agricultural vehicle",
+        "Pedal cycle",
+        "Mobility scooter",
+        "Motorcycle 50cc and under",
+        "Motorcycle 125cc and under",
+        "Motorcycle over 125cc and up to 500cc",
+        "Motorcycle over 500cc",
+        "Electric motorcycle",
+        "Other vehicle",
+    ]
+    speed_matrix = speed_matrix_stats[
+        (speed_matrix_stats["collisions"] >= 25)
+        & (pd.to_numeric(speed_matrix_stats["speed_limit"], errors="coerce") > 0)
+        & (speed_matrix_stats["vehicle_type_label"].astype(str).str.strip() != "Unknown")
+    ].copy()
     if speed_matrix.empty:
         st.info("Not enough data for a stable vehicle-speed risk matrix under current filters.")
     else:
-        heat = px.density_heatmap(
-            speed_matrix,
-            x="speed_limit",
-            y="vehicle_type_label",
-            z="serious_fatal_collision_rate_pct",
-            histfunc="avg",
-            color_continuous_scale="Reds",
-            title="Serious/fatal collision rate by vehicle type and speed limit (%)",
-            labels={
-                "speed_limit": "Speed limit (mph)",
-                "vehicle_type_label": "Vehicle type",
-                "serious_fatal_collision_rate_pct": "Serious/Fatal collision rate (%)",
-            },
+        extra_vehicle_types = [
+            label
+            for label in speed_matrix["vehicle_type_label"].dropna().astype(str).unique().tolist()
+            if label not in vehicle_type_order
+        ]
+        ordered_vehicle_types = vehicle_type_order + sorted(extra_vehicle_types)
+        speed_matrix["vehicle_type_label"] = pd.Categorical(
+            speed_matrix["vehicle_type_label"],
+            categories=ordered_vehicle_types,
+            ordered=True,
         )
-        heat.update_traces(
-            hovertemplate="Speed Limit (mph) = %{x}<br>Vehicle Type = %{y}<br>Serious/Fatal Collision Rate (%) = %{z:.1f}<extra></extra>"
+        speed_matrix = speed_matrix.sort_values(["vehicle_type_label", "speed_limit"])
+        speed_order = sorted(pd.to_numeric(speed_matrix["speed_limit"], errors="coerce").dropna().unique().tolist())
+        matrix = (
+            speed_matrix.assign(speed_limit=pd.to_numeric(speed_matrix["speed_limit"], errors="coerce"))
+            .set_index(["vehicle_type_label", "speed_limit"])[
+                ["serious_fatal_collision_rate_pct", "collisions", "fatal_collisions", "serious_collisions"]
+            ]
+            .reindex(
+                pd.MultiIndex.from_product(
+                    [ordered_vehicle_types, speed_order],
+                    names=["vehicle_type_label", "speed_limit"],
+                )
+            )
+            .reset_index()
+        )
+        matrix["has_data"] = matrix["collisions"].notna()
+        matrix["z_value"] = matrix["serious_fatal_collision_rate_pct"].where(matrix["has_data"], -1.0)
+        matrix["collisions_display"] = matrix["collisions"].map(
+            lambda v: f"{int(round(v)):,}" if pd.notna(v) else ""
+        )
+        matrix["fatal_collisions_display"] = matrix["fatal_collisions"].map(
+            lambda v: f"{int(round(v)):,}" if pd.notna(v) else ""
+        )
+        matrix["serious_collisions_display"] = matrix["serious_collisions"].map(
+            lambda v: f"{int(round(v)):,}" if pd.notna(v) else ""
+        )
+        matrix["hover_text"] = np.where(
+            matrix["has_data"],
+            (
+                "Speed Limit (mph) = "
+                + matrix["speed_limit"].astype(int).astype(str)
+                + "<br>Vehicle Type = "
+                + matrix["vehicle_type_label"].astype(str)
+                + "<br>Serious/Fatal Collision Rate (%) = "
+                + matrix["serious_fatal_collision_rate_pct"].round(1).astype(str)
+                + "<br>Collisions = "
+                + matrix["collisions_display"]
+                + "<br>Fatal Collisions = "
+                + matrix["fatal_collisions_display"]
+                + "<br>Serious Collisions = "
+                + matrix["serious_collisions_display"]
+            ),
+            (
+                "Speed Limit (mph) = "
+                + matrix["speed_limit"].astype(int).astype(str)
+                + "<br>Vehicle Type = "
+                + matrix["vehicle_type_label"].astype(str)
+                + "<br>No data for this cell"
+            ),
+        )
+        z_matrix = matrix.pivot(index="vehicle_type_label", columns="speed_limit", values="z_value").reindex(ordered_vehicle_types)
+        text_matrix = matrix.pivot(index="vehicle_type_label", columns="speed_limit", values="hover_text").reindex(ordered_vehicle_types)
+        max_rate = float(speed_matrix["serious_fatal_collision_rate_pct"].max())
+        heat = go.Figure(
+            data=[
+                go.Heatmap(
+                    x=speed_order,
+                    y=ordered_vehicle_types,
+                    z=z_matrix.values,
+                    text=text_matrix.values,
+                    hovertemplate="%{text}<extra></extra>",
+                    zmin=-1,
+                    zmax=max_rate,
+                    colorbar={"title": "Serious/Fatal collision rate (%)"},
+                    colorscale=[
+                        [0.0, "#d9d9d9"],
+                        [0.015, "#d9d9d9"],
+                        [0.0151, "#fff5f0"],
+                        [0.35, "#fcbba1"],
+                        [0.6, "#fb6a4a"],
+                        [0.8, "#ef3b2c"],
+                        [1.0, "#99000d"],
+                    ],
+                )
+            ]
+        )
+        heat.update_layout(
+            title="Serious/fatal collision rate by vehicle type and speed limit (%)",
+            xaxis_title="Speed limit (mph)",
+            yaxis_title="Vehicle type",
         )
         st.plotly_chart(heat, use_container_width=True)
 
@@ -1543,7 +1640,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
         with f3:
             ksi_definition = st.selectbox(
                 "KSI definition",
-                options=["Reported severity", "Adjusted severity (serious flag)"],
+                options=["Reported severity", "Adjusted severity estimate"],
                 index=0,
             )
 
@@ -1555,22 +1652,36 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
         st.info("No casualty records left after casualty filters.")
         return
 
-    if ksi_definition == "Adjusted severity (serious flag)" and "casualty_adjusted_severity_serious" in data.columns:
-        data["serious_flag"] = (_series_or_default(data, "casualty_adjusted_severity_serious", 0) >= 1).astype(int)
-        data["fatal_flag"] = (_series_or_default(data, "casualty_severity", 3) == 1).astype(int)
-        data["ksi_flag"] = ((data["serious_flag"] == 1) | (data["fatal_flag"] == 1)).astype(int)
+    if ksi_definition == "Adjusted severity estimate" and "casualty_adjusted_severity_serious" in data.columns:
+        data["fatal_flag"] = (_series_or_default(data, "casualty_severity", 3) == 1).astype(float)
+        data["serious_flag"] = _series_or_default(data, "casualty_adjusted_severity_serious", 0).clip(lower=0, upper=1)
+        data["slight_flag"] = _series_or_default(data, "casualty_adjusted_severity_slight", 0).clip(lower=0, upper=1)
+        data["ksi_flag"] = (data["fatal_flag"] + data["serious_flag"]).clip(upper=1)
+        fatal_metric_label = "Fatal"
+        serious_metric_label = "Estimated Serious"
+        slight_metric_label = "Estimated Slight"
+        metric_value_fmt = "{:.1f}"
+        rate_caption = "Adjusted mode uses weighted serious/slight estimates from the STATS19 adjusted severity fields."
     else:
-        data["fatal_flag"] = (_series_or_default(data, "casualty_severity", 3) == 1).astype(int)
-        data["serious_flag"] = (_series_or_default(data, "casualty_severity", 3) == 2).astype(int)
-        data["ksi_flag"] = ((data["fatal_flag"] == 1) | (data["serious_flag"] == 1)).astype(int)
+        severity = _series_or_default(data, "casualty_severity", 3)
+        data["fatal_flag"] = (severity == 1).astype(float)
+        data["serious_flag"] = (severity == 2).astype(float)
+        data["slight_flag"] = (severity == 3).astype(float)
+        data["ksi_flag"] = (data["fatal_flag"] + data["serious_flag"]).clip(upper=1)
+        fatal_metric_label = "Fatal"
+        serious_metric_label = "Serious"
+        slight_metric_label = "Slight"
+        metric_value_fmt = "{:,.0f}"
+        rate_caption = "Reported mode uses the original STATS19 casualty severity codes."
 
     st.markdown("### Casualty Demographics & Severity")
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Casualties", f"{len(data):,}")
-    c2.metric("Fatal", f"{int(data['fatal_flag'].sum()):,}")
-    c3.metric("Serious", f"{int(data['serious_flag'].sum()):,}")
-    c4.metric("Slight", f"{int((data['casualty_severity'] == 3).sum()):,}")
+    c2.metric(fatal_metric_label, metric_value_fmt.format(data["fatal_flag"].sum()))
+    c3.metric(serious_metric_label, metric_value_fmt.format(data["serious_flag"].sum()))
+    c4.metric(slight_metric_label, metric_value_fmt.format(data["slight_flag"].sum()))
     c5.metric("KSI Rate", f"{data['ksi_flag'].mean() * 100:.1f}%")
+    st.caption(rate_caption)
 
     extra1, extra2, extra3, extra4, extra5 = st.columns(5)
     extra1.metric("Pedestrian KSI Rate", f"{(data[data['casualty_class'] == 3]['ksi_flag'].mean() * 100):.1f}%" if (data["casualty_class"] == 3).any() else "N/A")

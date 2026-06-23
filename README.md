@@ -23,6 +23,17 @@ python scripts/prepare_data.py
 
 Subsequent app starts will load from Parquet (3–10× faster) and skip view computation.
 
+## Deploy to Streamlit Cloud
+
+1. Push this repo to GitHub.
+2. In [Streamlit Cloud](https://share.streamlit.io), create a new app from the repo.
+3. **Critical**: In app settings → **Build command**, set:
+   ```
+   python scripts/prepare_data.py
+   ```
+   This prebuilds the Parquet cache during deploy. Without it, the app loads CSVs on first request and can hit memory limits or time out (EOF health check failure).
+4. Main file: `app.py`. Deploy.
+
 ## Pages
 
 - Executive Overview — metrics, charts, operational alerts
