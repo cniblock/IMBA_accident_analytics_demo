@@ -13,6 +13,14 @@ from config import DATASET_CANDIDATES, LAD_LOOKUP, LEGACY_LAD_CROSSWALK
 PARQUET_CACHE_DIR = "parquet_cache"
 
 
+PROVISIONAL_COLLISION_FILE = "dft-road-casualty-statistics-collision-provisional-2025.csv"
+
+
+def has_provisional_data() -> bool:
+    """True when provisional 2025 STATS19 collision CSV is present and loaded."""
+    return (find_dataset_dir() / PROVISIONAL_COLLISION_FILE).exists()
+
+
 def find_dataset_dir() -> Path:
     for candidate in DATASET_CANDIDATES:
         if candidate.exists() and candidate.is_dir():
