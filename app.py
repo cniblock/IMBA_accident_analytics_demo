@@ -20,19 +20,24 @@ from views.sidebar import (
     render_sidebar_logo,
 )
 from charts.plotly_charts import init_plotly_theme
-from styles.theme import inject_theme
+from styles.theme import inject_theme, render_theme_debug, theme_debug_enabled
 from views.constants import PROVISIONAL_DATA_NOTICE
 
 st.set_page_config(
     page_title="STATS19 Intelligence Platform",
     page_icon="🚦",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 inject_theme()
 
 
 def main() -> None:
     init_plotly_theme()
+
+    render_sidebar_logo()
+    if theme_debug_enabled():
+        render_theme_debug()
 
     cache_fingerprint = data_cache_fingerprint()
     try:
@@ -63,7 +68,6 @@ def main() -> None:
         )
         st.stop()
 
-    render_sidebar_logo()
     page = render_intelligence_nav()
     st.sidebar.divider()
     filtered_collision = apply_sidebar_filters(collision_view)

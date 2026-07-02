@@ -2,7 +2,15 @@
 
 from __future__ import annotations
 
+import os
+import re
+from pathlib import Path
+
 import streamlit as st
+
+STYLES_DIR = Path(__file__).resolve().parent
+APP_ROOT = STYLES_DIR.parent
+THEME_CSS_PATH = STYLES_DIR / "theme.css"
 
 COLORS: dict[str, str] = {
     "bg": "#121722",
@@ -514,9 +522,7 @@ div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) {{
 
 
 def _scope_css_for_hosted_streamlit(css: str) -> str:
-    """Raise selector specificity so theme CSS wins on Streamlit Cloud (1.42+)."""
-    import re
-
+    """Raise selector specificity so theme CSS wins on hosted Streamlit (1.42+)."""
     css = re.sub(r"(?<!\.stApp )\[data-testid=", ".stApp [data-testid=", css)
     css = re.sub(r"(?<!\.stApp )div\[data-testid=", ".stApp div[data-testid=", css)
     css = re.sub(r"(?<!\.stApp )\.stCaption", ".stApp .stCaption", css)
@@ -524,27 +530,52 @@ def _scope_css_for_hosted_streamlit(css: str) -> str:
     css = re.sub(r"(?<!\.stApp )\.imba-", ".stApp .imba-", css)
     css = re.sub(r"(?<!\.stApp )\.georisk-", ".stApp .georisk-", css)
     css = re.sub(r"(?<!\.stApp )table\.imba-table", ".stApp table.imba-table", css)
-    css = re.sub(
-        r"^h1,",
-        ".stApp h1,",
-        css,
-        flags=re.MULTILINE,
-    )
-    css = re.sub(
-        r"^h2, h3,",
-        ".stApp h2, .stApp h3,",
-        css,
-        flags=re.MULTILINE,
-    )
+    css = re.sub(r"^h1,", ".stApp h1,", css, flags=re.MULTILINE)
+    css = re.sub(r"^h2, h3,", ".stApp h2, .stApp h3,", css, flags=re.MULTILINE)
     css = re.sub(r"(?<!\.stApp )h1\.imba-page-title", ".stApp h1.imba-page-title", css)
     return css
 
 
-def inject_theme() -> None:
-    """Inject IMBA Dynamics CSS on each Streamlit run."""
-    css = _scope_css_for_hosted_streamlit(_css())
+def _load_theme_css() -> tuple[str, str]:
+    """Load CSS from committed theme.css, falling back to in-code template."""
+    if THEME_CSS_PATH.is_file():
+        return THEME_CSS_PATH.read_text(encoding="utf-8"), "file"
+    return _css(), "python"
+
+
+def _inject_style_block(css: str) -> None:
+    """Inject CSS using markdown (Snowflake) and st.html (Streamlit Cloud) for compatibility."""
     style_block = f"<style>{css}</style>"
+    st.markdown(style_block, unsafe_allow_html=True)
     if hasattr(st, "html"):
         st.html(style_block, unsafe_allow_javascript=False)
-    else:
-        st.markdown(style_block, unsafe_allow_html=True)
+
+
+def inject_theme(*, warn_if_missing: bool = True) -> None:
+    """Inject IMBA Dynamics CSS immediately after st.set_page_config()."""
+    raw_css, source = _load_theme_css()
+    css = _scope_css_for_hosted_streamlit(raw_css)
+    _inject_style_block(css)
+
+    if warn_if_missing and source == "python":
+        st.sidebar.warning(f"Theme CSS file not found: {THEME_CSS_PATH}")
+
+
+def render_theme_debug() -> None:
+    """Sidebar diagnostics for hosted Streamlit/Snowflake theme troubleshooting."""
+    raw_css, source = _load_theme_css()
+    st.sidebar.markdown("---")
+    st.sidebar.caption("Theme debug")
+    st.sidebar.caption(f"Streamlit: {st.__version__}")
+    st.sidebar.caption(f"CWD: {Path.cwd()}")
+    st.sidebar.caption(f"App root: {APP_ROOT}")
+    st.sidebar.caption(f"CSS path: {THEME_CSS_PATH}")
+    st.sidebar.caption(f"CSS exists: {THEME_CSS_PATH.is_file()}")
+    st.sidebar.caption(f"CSS source: {source}")
+    if THEME_CSS_PATH.is_file():
+        st.sidebar.caption(f"CSS bytes: {THEME_CSS_PATH.stat().st_size:,}")
+    st.sidebar.caption(f"Scoped CSS bytes: {len(_scope_css_for_hosted_streamlit(raw_css)):,}")
+
+
+def theme_debug_enabled() -> bool:
+    return os.environ.get("IMBA_THEME_DEBUG", "").strip().lower() in {"1", "true", "yes"}

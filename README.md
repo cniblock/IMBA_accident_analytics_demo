@@ -33,7 +33,18 @@ Subsequent app starts will load from Parquet (3–10× faster) and skip view com
    ```
    This prebuilds the Parquet cache during deploy. Without it, the app loads CSVs on first request and can hit memory limits or time out (EOF health check failure).
 4. Main file: `app.py`. Deploy.
-5. **Theme/CSS**: Custom styling is injected via `styles/theme.py` using `st.html()`. After pushing theme changes, use **Manage app → Reboot app** (or redeploy) so Streamlit Cloud picks up the latest commit. If KPI cards or sidebar nav look unstyled, confirm the deployed commit includes `styles/theme.py` and reboot the app.
+5. **Theme/CSS**: Styling uses three layers:
+   - **`.streamlit/config.toml`** — base dark theme (must be committed under `.streamlit/`, not `streamlit/`).
+   - **`styles/theme.css`** — committed custom CSS loaded via `Path(__file__)` (regenerate with `python scripts/build_theme_css.py` after colour changes).
+   - **`charts/plotly_charts.py`** — Plotly layout colours in Python (not CSS-only).
+
+   CSS is injected immediately after `st.set_page_config()` in `app.py`. After theme changes, reboot/redeploy the hosted app.
+
+   **Snowflake / hosted debug:** set environment variable `IMBA_THEME_DEBUG=1` to show sidebar diagnostics (Streamlit version, CSS path, file exists, byte size).
+
+## Deploy to Snowflake Streamlit
+
+Ensure the deployed repo includes `.streamlit/config.toml` and `styles/theme.css` on the same commit as `app.py`. If KPI cards or sidebar nav look unstyled, enable `IMBA_THEME_DEBUG=1` and confirm `CSS exists: True` in the sidebar.
 
 ## Pages
 
