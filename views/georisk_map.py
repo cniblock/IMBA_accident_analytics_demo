@@ -6,6 +6,7 @@ import plotly.express as px
 import streamlit as st
 
 from charts.plotly_charts import plot_chart, SEVERITY_COLORS
+from styles.dataframe import render_dataframe
 from styles.theme import COLORS
 from transforms import ensure_label_columns as _ensure_label_columns, series_or_default as _series_or_default
 from views.constants import HARM_INDEX_CAPTION
@@ -152,4 +153,4 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
     )
     for c in ["Collisions", "Fatal", "Serious", "Slight", "Harm Index"]:
         top_districts[c] = np.rint(top_districts[c]).astype("int64")
-    st.dataframe(top_districts.reset_index(drop=True), use_container_width=True)
+    render_dataframe(top_districts, use_container_width=True)

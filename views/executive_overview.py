@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from charts.plotly_charts import plot_chart, SEVERITY_COLORS
+from styles.dataframe import render_dataframe
 from styles.theme import COLORS
 from views.constants import HARM_INDEX_CAPTION
 
@@ -208,7 +209,7 @@ def page_executive_overview(
     top_risk = top_risk[[c for c in col_order if c in top_risk.columns]]
     st.subheader("Top Risk Districts")
     st.caption(HARM_INDEX_CAPTION)
-    st.dataframe(top_risk.reset_index(drop=True), use_container_width=True)
+    render_dataframe(top_risk, use_container_width=True)
 
     st.subheader("Report Export")
     with st.expander("Download automated report packs"):
@@ -261,8 +262,8 @@ def page_executive_overview(
             f"Top 10 districts with the largest increase in collisions in {focus_label} "
             f"vs their prior 3‑month average (avoids incomplete recent data)."
         )
-        st.dataframe(
-            alerts_display[["District", "Collisions (focus mo)", "Prior 3‑mo avg", "Change vs baseline"]].reset_index(drop=True),
+        render_dataframe(
+            alerts_display[["District", "Collisions (focus mo)", "Prior 3‑mo avg", "Change vs baseline"]],
             use_container_width=True,
         )
     elif len(months) >= 7 and len(baseline_months) == 0:

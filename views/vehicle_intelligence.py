@@ -13,6 +13,7 @@ from transforms import (
 )
 from views.constants import TRIAGE_HARM_CAPTION
 from charts.plotly_charts import plot_chart
+from styles.dataframe import render_dataframe
 
 def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
     st.title("Vehicle Intelligence")
@@ -59,7 +60,7 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
     top_vehicle["avg_speed_limit"] = np.rint(top_vehicle["avg_speed_limit"]).astype("int64")
     top_vehicle["avg_driver_age"] = np.rint(top_vehicle["avg_driver_age"]).astype("int64")
     st.subheader("Vehicle Type Risk Ranking")
-    st.dataframe(
+    render_dataframe(
         top_vehicle.rename(
             columns={
                 "vehicle_type_label": "Vehicle Type",
@@ -327,7 +328,7 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
     ].copy()
     if not manoeuvre_rank.empty:
         manoeuvre_rank["serious_fatal_rate_pct"] = manoeuvre_rank["serious_fatal_collision_rate_pct"]
-        st.dataframe(
+        render_dataframe(
             manoeuvre_rank.sort_values("serious_fatal_rate_pct", ascending=False)
             .head(12)
             .rename(
@@ -347,7 +348,7 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
     st.markdown("### Incident Signature Intelligence")
     signature_summary = _collision_level_serious_fatal_stats(vehicle_data, ["incident_signature"])
     signature_summary["serious_fatal_rate_pct"] = signature_summary["serious_fatal_collision_rate_pct"]
-    st.dataframe(
+    render_dataframe(
         signature_summary.sort_values("serious_fatal_rate_pct", ascending=False).rename(
             columns={
                 "incident_signature": "Incident Signature",
@@ -477,7 +478,7 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
         st.info("No records for this vehicle type under current filters.")
     else:
         st.caption(f"Showing highest triage score cases for {selected_type}")
-        st.dataframe(
+        render_dataframe(
             drill.sort_values(["triage_score", "harm_score"], ascending=False)[
                 [
                     "collision_index",
@@ -553,7 +554,7 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
                         "avg_speed_limit",
                     ]:
                         top_models[c] = np.rint(top_models[c]).astype("int64")
-                    st.dataframe(
+                    render_dataframe(
                         top_models.rename(
                             columns={
                                 "make_model_label": "Make/Model",

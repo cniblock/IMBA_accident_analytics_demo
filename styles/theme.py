@@ -178,6 +178,76 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
               inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }}
 
+.imba-table-container {{
+  width: 100%;
+  background: linear-gradient(160deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%);
+  border: 1px solid {c["card_border"]};
+  border-radius: 14px;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 520px;
+  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35),
+              inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}}
+
+table.imba-table {{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-family: 'Inter', sans-serif;
+}}
+
+table.imba-table thead th {{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: {c["dataframe_header"]};
+  color: {c["text_muted"]};
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.7rem 1rem;
+  text-align: left;
+  border-bottom: 2px solid {c["card_border"]};
+  white-space: nowrap;
+}}
+
+table.imba-table tbody td {{
+  padding: 0.6rem 1rem;
+  color: {c["text"]};
+  border-bottom: 1px solid rgba(42, 53, 72, 0.55);
+  vertical-align: middle;
+}}
+
+table.imba-table tbody tr:nth-child(even) td {{
+  background: rgba(255, 255, 255, 0.025);
+}}
+
+table.imba-table tbody tr:hover td {{
+  background: rgba(0, 170, 255, 0.08);
+}}
+
+table.imba-table tbody tr:last-child td {{
+  border-bottom: none;
+}}
+
+.imba-table-container table {{
+  background: transparent !important;
+}}
+
+.imba-table-container table th,
+.imba-table-container table td {{
+  background: transparent !important;
+  color: {c["text"]} !important;
+  border-color: rgba(42, 53, 72, 0.55) !important;
+}}
+
+.imba-table-container table thead th {{
+  background: {c["dataframe_header"]} !important;
+  color: {c["text_muted"]} !important;
+}}
+
 div[data-testid="stExpander"] {{
   background: linear-gradient(145deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%);
   border: 1px solid {c["card_border"]};

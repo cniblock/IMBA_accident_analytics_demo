@@ -18,6 +18,7 @@ from transforms import (
 )
 from views.constants import PRIORITY_QUEUE_CAPTION
 from charts.plotly_charts import plot_chart
+from styles.dataframe import render_dataframe
 
 def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_linked_view: pd.DataFrame) -> None:
     st.title("Casualty Intelligence")
@@ -224,7 +225,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
             hovertemplate="Age Band = %{x}<br>Sex = %{y}<br>KSI Rate (%) = %{z:.1f}<extra></extra>"
         )
         plot_chart(sex_fig, use_container_width=True)
-        st.dataframe(
+        render_dataframe(
             age_sex.sort_values("ksi_rate_pct", ascending=False).head(12).rename(
                 columns={
                     "sex_of_casualty_label": "Sex",
@@ -376,7 +377,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
     report_summary = report_summary[
         report_summary[report_col].astype(str).str.strip() != "Data missing or out of range"
     ].copy()
-    st.dataframe(
+    render_dataframe(
         report_summary.rename(
             columns={
                 report_col: "Reporting Mode",
@@ -402,7 +403,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
     )
     if not ped_rank.empty:
         ped_rank["pedestrian_ksi_rate_pct"] = _safe_ratio(ped_rank["pedestrian_ksi"], ped_rank["pedestrian_casualties"]) * 100
-        st.dataframe(
+        render_dataframe(
             ped_rank.sort_values("pedestrian_ksi", ascending=False).head(12).rename(
                 columns={
                     "district_display": "District",
@@ -423,7 +424,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
         .reset_index()
     )
     district_harm["harm_index"] = district_harm["serious"] * 2 + district_harm["fatal"] * 5
-    st.dataframe(
+    render_dataframe(
         district_harm.sort_values("harm_index", ascending=False).head(12).rename(
             columns={
                 "district_display": "District",
@@ -611,7 +612,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
             "priority_score": "Priority Score",
         }
     )
-    st.dataframe(queue_display.reset_index(drop=True), use_container_width=True)
+    render_dataframe(queue_display, use_container_width=True)
     st.download_button(
         label="Download Priority Case Queue (CSV)",
         data=queue_display.to_csv(index=False),
@@ -633,7 +634,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
             .reset_index()
         )
         coverage["linked_of_linkable_pct"] = _safe_ratio(coverage["linked"], coverage["linkable"]) * 100
-        st.dataframe(
+        render_dataframe(
             coverage.rename(
                 columns={
                     "casualty_class_label": "Casualty Class",

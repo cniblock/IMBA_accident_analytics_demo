@@ -7,6 +7,7 @@ import streamlit as st
 
 from transforms import ensure_label_columns as _ensure_label_columns, safe_ratio as _safe_ratio, series_or_default as _series_or_default
 from charts.plotly_charts import plot_chart
+from styles.dataframe import render_dataframe
 
 def page_risk_factors(collision_view: pd.DataFrame) -> None:
     st.title("Risk Factors")
@@ -177,7 +178,7 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
     for c in ["collisions", "fatal_or_serious", "serious", "slight", "harm_index"]:
         corridors[c] = np.rint(corridors[c]).astype("int64")
     if not corridors.empty:
-        st.dataframe(
+        render_dataframe(
             corridors.sort_values("harm_index", ascending=False)
             .head(15)
             .rename(
@@ -209,7 +210,7 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
         if watch.empty:
             st.info("None of the specified road numbers meet current filters/thresholds.")
         else:
-            st.dataframe(
+            render_dataframe(
                 watch.sort_values("harm_index", ascending=False).rename(
                     columns={
                         "road_ref": "Road",
@@ -380,7 +381,7 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
     for c in ["collisions", "ksi", "serious", "slight"]:
         trunk_split[c] = np.rint(trunk_split[c]).astype("int64")
     trunk_split["ksi_rate_pct"] = _safe_ratio(trunk_split["ksi"], trunk_split["collisions"]) * 100
-    st.dataframe(
+    render_dataframe(
         trunk_split.rename(
             columns={
                 "road_ownership_display": "Road Ownership",
@@ -413,7 +414,7 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
         trunk_district["collisions"] = np.rint(trunk_district["collisions"]).astype("int64")
         trunk_district["ksi"] = np.rint(trunk_district["ksi"]).astype("int64")
         trunk_district["ksi_rate_pct"] = _safe_ratio(trunk_district["ksi"], trunk_district["collisions"]) * 100
-        st.dataframe(
+        render_dataframe(
             trunk_district.sort_values("ksi", ascending=False).head(12).rename(
                 columns={
                     "district_display": "District",
