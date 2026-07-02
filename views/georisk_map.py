@@ -152,4 +152,4 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
     )
     for c in ["Collisions", "Fatal", "Serious", "Slight", "Harm Index"]:
         top_districts[c] = np.rint(top_districts[c]).astype("int64")
-    st.dataframe(top_districts, use_container_width=True, hide_index=True)
+    st.dataframe(top_districts.reset_index(drop=True), use_container_width=True)

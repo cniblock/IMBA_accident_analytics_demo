@@ -235,7 +235,6 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
                 }
             ),
             use_container_width=True,
-            hide_index=True,
         )
 
     adverse_group = age_sex.sort_values(["ksi_rate_pct", "casualties"], ascending=[False, False]).head(1)
@@ -390,7 +389,6 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
             }
         ),
         use_container_width=True,
-        hide_index=True,
     )
 
     ped_rank = (
@@ -414,7 +412,6 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
                 }
             ),
             use_container_width=True,
-            hide_index=True,
         )
 
     district_harm = (
@@ -436,7 +433,6 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
             }
         ),
         use_container_width=True,
-        hide_index=True,
     )
 
     vrus = data[data["casualty_type_label"].isin(["Pedestrian", "Cyclist"])].copy()
@@ -615,7 +611,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
             "priority_score": "Priority Score",
         }
     )
-    st.dataframe(queue_display, use_container_width=True, hide_index=True)
+    st.dataframe(queue_display.reset_index(drop=True), use_container_width=True)
     st.download_button(
         label="Download Priority Case Queue (CSV)",
         data=queue_display.to_csv(index=False),
@@ -648,7 +644,6 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
                 }
             ),
             use_container_width=True,
-            hide_index=True,
         )
         overall_linked = _safe_ratio(pd.Series([coverage["linked"].sum()]), pd.Series([coverage["linkable"].sum()])).iloc[0] * 100
         st.caption(f"Vehicle-context linkage coverage among linkable casualties: {overall_linked:.1f}%")

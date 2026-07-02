@@ -74,7 +74,6 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
             }
         ),
         use_container_width=True,
-        hide_index=True,
     )
 
     c1, c2 = st.columns(2)
@@ -343,7 +342,6 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
                 ["Vehicle Manoeuvre", "Collisions", "Fatal Collisions", "Serious Collisions", "Serious/Fatal Rate (%)"]
             ],
             use_container_width=True,
-            hide_index=True,
         )
 
     st.markdown("### Incident Signature Intelligence")
@@ -360,7 +358,6 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
             }
         ),
         use_container_width=True,
-        hide_index=True,
     )
 
     st.markdown("#### Collision Mechanics Flow")
@@ -498,7 +495,6 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
             .head(50)
             .rename(columns={"collision_index": "case_id"}),
             use_container_width=True,
-            hide_index=True,
         )
 
     st.markdown("### Manufacturer Intelligence")
@@ -582,7 +578,6 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
                             ]
                         ],
                         use_container_width=True,
-                        hide_index=True,
                     )
 
                     model_segment = manufacturer_data[manufacturer_data["make_model_label"] != "Unknown"].copy()

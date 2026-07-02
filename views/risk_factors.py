@@ -201,7 +201,6 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
                 ]
             ],
             use_container_width=True,
-            hide_index=True,
         )
 
         watchlist_numbers = [4540, 4040, 1000, 666, 406, 259, 124, 41, 38, 35, 34, 27, 13, 6, 1]
@@ -232,7 +231,6 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
                     ]
                 ],
                 use_container_width=True,
-                hide_index=True,
             )
 
     st.markdown("### Junction & Control Intelligence")
@@ -403,7 +401,6 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
             ]
         ],
         use_container_width=True,
-        hide_index=True,
     )
 
     trunk_district = (
@@ -426,5 +423,4 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
                 }
             ),
             use_container_width=True,
-            hide_index=True,
         )

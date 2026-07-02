@@ -62,7 +62,7 @@ def page_pipeline_health(
         ]
     )
     st.subheader("Join Integrity / Quality Metrics")
-    st.dataframe(join_checks.style.format({"value_pct": "{:.2f}%"}), use_container_width=True, hide_index=True)
+    st.dataframe(join_checks.style.format({"value_pct": "{:.2f}%"}), use_container_width=True)
 
     collision_counts = (
         collision_view[["collision_index", "number_of_casualties", "casualties_total"]]
@@ -84,4 +84,4 @@ def page_pipeline_health(
     for col, mapper in CODE_MAPS.items():
         for key, label in mapper.items():
             dict_rows.append({"column": col, "code": key, "label": label})
-    st.dataframe(pd.DataFrame(dict_rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(dict_rows).reset_index(drop=True), use_container_width=True)
