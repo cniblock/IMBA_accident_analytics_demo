@@ -28,10 +28,10 @@ st.set_page_config(
     page_icon="🚦",
     layout="wide",
 )
+inject_theme()
 
 
 def main() -> None:
-    inject_theme()
     init_plotly_theme()
 
     cache_fingerprint = data_cache_fingerprint()

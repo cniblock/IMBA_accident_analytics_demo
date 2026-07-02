@@ -33,6 +33,7 @@ Subsequent app starts will load from Parquet (3–10× faster) and skip view com
    ```
    This prebuilds the Parquet cache during deploy. Without it, the app loads CSVs on first request and can hit memory limits or time out (EOF health check failure).
 4. Main file: `app.py`. Deploy.
+5. **Theme/CSS**: Custom styling is injected via `styles/theme.py` using `st.html()`. After pushing theme changes, use **Manage app → Reboot app** (or redeploy) so Streamlit Cloud picks up the latest commit. If KPI cards or sidebar nav look unstyled, confirm the deployed commit includes `styles/theme.py` and reboot the app.
 
 ## Pages
 

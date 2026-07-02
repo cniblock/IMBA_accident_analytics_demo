@@ -39,18 +39,16 @@ CSS_VARIABLES = "\n".join(
 def _css() -> str:
     c = COLORS
     return f"""
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-:root {{
+:root, .stApp {{
 {CSS_VARIABLES}
 }}
 
-html, body, [class*="css"] {{
-  font-family: 'Inter', sans-serif !important;
+.stApp, .stApp [class*="css"] {{
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif !important;
 }}
 
-[data-testid="stAppViewContainer"],
-[data-testid="stAppViewContainer"] > .main {{
+.stApp [data-testid="stAppViewContainer"],
+.stApp [data-testid="stAppViewContainer"] > .main {{
   background: radial-gradient(
     ellipse at 20% 0%,
     {c["page_glow"]} 0%,
@@ -127,16 +125,16 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
 }}
 
 [data-testid="stMetric"] {{
-  background: linear-gradient(160deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%);
-  border: 1px solid {c["card_border"]};
-  border-radius: 14px;
-  padding: 1rem 1.25rem 1.1rem;
+  background: linear-gradient(160deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%) !important;
+  border: 1px solid {c["card_border"]} !important;
+  border-radius: 14px !important;
+  padding: 1rem 1.25rem 1.1rem !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35),
-              inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  position: relative;
-  overflow: hidden;
-  min-height: 7.25rem;
-  box-sizing: border-box;
+              inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 7.25rem !important;
+  box-sizing: border-box !important;
 }}
 
 [data-testid="stMetric"]::before {{
@@ -247,15 +245,15 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   -webkit-line-clamp: 3;
 }}
 
-[data-testid="stPlotlyChart"] {{
-  background: linear-gradient(145deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%);
-  border: 1px solid {c["card_border"]};
-  border-radius: 14px;
-  padding: 0.35rem;
+.stApp [data-testid="stPlotlyChart"] {{
+  background: linear-gradient(145deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%) !important;
+  border: 1px solid {c["card_border"]} !important;
+  border-radius: 14px !important;
+  padding: 0.35rem !important;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35),
-              inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  overflow: hidden;
-  margin-bottom: 1.25rem;
+              inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  overflow: hidden !important;
+  margin-bottom: 1.25rem !important;
 }}
 
 [data-testid="stPlotlyChart"]:has(.mapboxgl-map),
@@ -515,6 +513,38 @@ div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) {{
 """
 
 
+def _scope_css_for_hosted_streamlit(css: str) -> str:
+    """Raise selector specificity so theme CSS wins on Streamlit Cloud (1.42+)."""
+    import re
+
+    css = re.sub(r"(?<!\.stApp )\[data-testid=", ".stApp [data-testid=", css)
+    css = re.sub(r"(?<!\.stApp )div\[data-testid=", ".stApp div[data-testid=", css)
+    css = re.sub(r"(?<!\.stApp )\.stCaption", ".stApp .stCaption", css)
+    css = re.sub(r"(?<!\.stApp )\.stDownloadButton", ".stApp .stDownloadButton", css)
+    css = re.sub(r"(?<!\.stApp )\.imba-", ".stApp .imba-", css)
+    css = re.sub(r"(?<!\.stApp )\.georisk-", ".stApp .georisk-", css)
+    css = re.sub(r"(?<!\.stApp )table\.imba-table", ".stApp table.imba-table", css)
+    css = re.sub(
+        r"^h1,",
+        ".stApp h1,",
+        css,
+        flags=re.MULTILINE,
+    )
+    css = re.sub(
+        r"^h2, h3,",
+        ".stApp h2, .stApp h3,",
+        css,
+        flags=re.MULTILINE,
+    )
+    css = re.sub(r"(?<!\.stApp )h1\.imba-page-title", ".stApp h1.imba-page-title", css)
+    return css
+
+
 def inject_theme() -> None:
     """Inject IMBA Dynamics CSS on each Streamlit run."""
-    st.markdown(f"<style>{_css()}</style>", unsafe_allow_html=True)
+    css = _scope_css_for_hosted_streamlit(_css())
+    style_block = f"<style>{css}</style>"
+    if hasattr(st, "html"):
+        st.html(style_block, unsafe_allow_javascript=False)
+    else:
+        st.markdown(style_block, unsafe_allow_html=True)
