@@ -55,7 +55,12 @@ def _df_to_html(df: pd.DataFrame) -> str:
     )
 
 
-def render_dataframe(data: Any, use_container_width: bool = True, **kwargs: Any) -> None:
+def render_dataframe(
+    data: Any,
+    use_container_width: bool = True,
+    title: str | None = None,
+    **kwargs: Any,
+) -> None:
     """
     Render a pandas DataFrame or Styler with IMBA dark-theme styling.
 
@@ -63,6 +68,9 @@ def render_dataframe(data: Any, use_container_width: bool = True, **kwargs: Any)
     ignore theme CSS on st.dataframe). Unsupported kwargs (e.g. hide_index) are ignored.
     """
     _ = use_container_width, kwargs
+
+    if title:
+        st.caption(title)
 
     if isinstance(data, Styler):
         table_html = _styler_to_html(data)
@@ -73,6 +81,6 @@ def render_dataframe(data: Any, use_container_width: bool = True, **kwargs: Any)
         return
 
     st.markdown(
-        f'<div class="imba-table-container">{table_html}</div>',
+        f'<div class="imba-table-block"><div class="imba-table-container">{table_html}</div></div>',
         unsafe_allow_html=True,
     )

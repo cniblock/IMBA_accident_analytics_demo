@@ -390,6 +390,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
             }
         ),
         use_container_width=True,
+        title="Reporting mode summary",
     )
 
     ped_rank = (
@@ -413,6 +414,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
                 }
             ),
             use_container_width=True,
+            title="Top districts — pedestrian casualties",
         )
 
     district_harm = (
@@ -434,6 +436,7 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
             }
         ),
         use_container_width=True,
+        title="Top districts — harm index",
     )
 
     vrus = data[data["casualty_type_label"].isin(["Pedestrian", "Cyclist"])].copy()

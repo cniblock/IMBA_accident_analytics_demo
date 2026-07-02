@@ -72,26 +72,57 @@ def init_plotly_theme() -> None:
     _plotly_theme_ready = True
 
 
+def _is_map_figure(fig) -> bool:
+    """True when the figure uses Mapbox/Geo traces (basemap must stay visible)."""
+    if getattr(fig.layout, "mapbox", None) is not None:
+        return True
+    geo = getattr(fig.layout, "geo", None)
+    if geo is not None and getattr(geo, "visible", False):
+        return True
+    for trace in fig.data:
+        trace_type = getattr(trace, "type", "") or ""
+        if trace_type in {
+            "scattermapbox",
+            "choroplethmapbox",
+            "densitymapbox",
+            "scattermap",
+            "choroplethmap",
+            "densitymap",
+            "scattergeo",
+            "choroplethgeo",
+        }:
+            return True
+    return False
+
+
 def apply_chart_theme(fig):
     """Apply IMBA surface and axis styling to a Plotly figure."""
-    fig.update_layout(
-        paper_bgcolor=COLORS["card_grad_start"],
-        plot_bgcolor=COLORS["card_grad_end"],
-        font={"family": "Inter, sans-serif", "color": COLORS["text"], "size": 13},
-        title={"font": {"size": 15, "color": COLORS["text"]}},
-        legend={
+    is_map = _is_map_figure(fig)
+    layout_kwargs = {
+        "paper_bgcolor": COLORS["card_grad_start"],
+        "font": {"family": "Inter, sans-serif", "color": COLORS["text"], "size": 13},
+        "title": {"font": {"size": 15, "color": COLORS["text"]}},
+        "legend": {
             "font": {"color": COLORS["text"]},
             "bgcolor": "rgba(26, 34, 48, 0.85)",
             "bordercolor": COLORS["card_border"],
         },
-        hoverlabel={
+        "hoverlabel": {
             "bgcolor": COLORS["card"],
             "bordercolor": COLORS["card_border"],
             "font": {"color": COLORS["text"], "family": "Inter, sans-serif", "size": 12},
         },
-    )
-    fig.update_xaxes(**AXIS_STYLE)
-    fig.update_yaxes(**AXIS_STYLE)
+    }
+    if is_map:
+        # Opaque plot_bgcolor covers Mapbox/OSM tiles — keep the map surface clear.
+        layout_kwargs["plot_bgcolor"] = "rgba(0,0,0,0)"
+    else:
+        layout_kwargs["plot_bgcolor"] = COLORS["card_grad_end"]
+
+    fig.update_layout(**layout_kwargs)
+    if not is_map:
+        fig.update_xaxes(**AXIS_STYLE)
+        fig.update_yaxes(**AXIS_STYLE)
     return fig
 
 

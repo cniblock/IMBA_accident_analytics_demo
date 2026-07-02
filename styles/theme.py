@@ -115,11 +115,15 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   font-size: 1.1rem !important;
   font-weight: 700 !important;
   color: {c["text"]} !important;
+  margin-top: 1.5rem !important;
+  margin-bottom: 0.75rem !important;
 }}
 
 .stCaption, small, [data-testid="stCaptionContainer"] {{
   color: {c["text_muted"]} !important;
   font-size: 0.82rem !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.65rem !important;
 }}
 
 [data-testid="stMetric"] {{
@@ -166,6 +170,7 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35),
               inset 0 1px 0 rgba(255, 255, 255, 0.04);
   overflow: hidden;
+  margin-bottom: 1.25rem;
 }}
 
 [data-testid="stDataFrame"],
@@ -176,6 +181,10 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   overflow: hidden;
   box-shadow: 0 6px 28px rgba(0, 0, 0, 0.35),
               inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}}
+
+.imba-table-block {{
+  margin-bottom: 1.25rem;
 }}
 
 .imba-table-container {{

@@ -7,7 +7,6 @@ import streamlit as st
 
 from charts.plotly_charts import plot_chart, SEVERITY_COLORS
 from styles.dataframe import render_dataframe
-from styles.theme import COLORS
 from transforms import ensure_label_columns as _ensure_label_columns, series_or_default as _series_or_default
 from views.constants import HARM_INDEX_CAPTION
 
@@ -35,105 +34,91 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
         st.warning("No geocoded collisions available for current filters.")
         return
 
-    map_mode = st.radio(
-        "Map view",
-        options=["point_sample", "density_heatmap"],
-        format_func=lambda x: {
-            "point_sample": "Point sample (by severity)",
-            "density_heatmap": "Density heatmap (all geocoded points)",
-        }[x],
-        horizontal=True,
-        key="georisk_map_mode",
-    )
-
-    if map_mode == "density_heatmap":
-        density_n = min(len(geo), 25000)
-        density_geo = geo if len(geo) <= density_n else geo.sample(n=density_n, random_state=42)
-        map_fig = px.density_mapbox(
-            density_geo,
-            lat="latitude",
-            lon="longitude",
-            radius=12,
-            zoom=5,
-            height=620,
-            color_continuous_scale=[
-                [0.0, COLORS["card_grad_end"]],
-                [0.25, "#0e4a6e"],
-                [0.5, COLORS["accent"]],
-                [0.75, COLORS["accent_glow"]],
-                [1.0, COLORS["kpi_bar_end"]],
-            ],
-            title=f"Collision density heatmap ({len(density_geo):,} geocoded points)",
-            labels={"latitude": "Latitude", "longitude": "Longitude"},
-        )
-        map_fig.update_layout(
-            mapbox_style="open-street-map",
-            margin={"l": 0, "r": 0, "t": 40, "b": 0},
-        )
-    else:
-        sample_size = min(5000, len(geo))
-        hover_cols = [
-            c
-            for c in [
-                "collision_index",
-                "date",
-                "speed_limit",
-                "light_conditions_label",
-                "weather_conditions_label",
-            ]
-            if c in geo.columns
-        ]
-        map_fig = px.scatter_mapbox(
-            geo.sample(n=sample_size, random_state=42),
-            lat="latitude",
-            lon="longitude",
-            color=sev_col,
-            color_discrete_map=SEVERITY_COLORS,
-            zoom=5,
-            height=620,
-            hover_data=hover_cols if hover_cols else None,
-            title=f"Collision hotspots (sampled {sample_size:,} of {len(geo):,} points)",
-            labels={
-                sev_col: "Collision Severity",
-                "latitude": "Latitude",
-                "longitude": "Longitude",
-                "collision_index": "Collision Index",
-                "date": "Date",
-                "speed_limit": "Speed Limit (mph)",
-                "light_conditions_label": "Light Conditions",
-                "weather_conditions_label": "Weather Conditions",
-            },
-        )
-        map_fig.update_layout(
-            mapbox_style="open-street-map",
-            margin={"l": 0, "r": 0, "t": 40, "b": 0},
-            hoverlabel=dict(
-                namelength=-1,
-                bgcolor="#1a2230",
-                font_size=12,
-                font_color="#e8edf5",
-            ),
-        )
-        if len(hover_cols) >= 5:
-            map_fig.update_traces(
-                hovertemplate=(
-                    "<b>Collision Severity</b> = %{fullData.name}<br>"
-                    "Latitude = %{lat}<br>"
-                    "Longitude = %{lon}<br>"
-                    "Collision Index = %{customdata[0]}<br>"
-                    "Date = %{customdata[1]}<br>"
-                    "Speed Limit (mph) = %{customdata[2]}<br>"
-                    "Light Conditions = %{customdata[3]}<br>"
-                    "Weather Conditions = %{customdata[4]}<extra></extra>"
-                )
+    map_geo = geo
+    map_period_label = "all available dates"
+    if "date" in geo.columns:
+        collision_dates = pd.to_datetime(geo["date"], errors="coerce")
+        max_date = collision_dates.max()
+        if pd.notna(max_date):
+            cutoff = max_date - pd.DateOffset(months=12)
+            map_geo = geo[collision_dates >= cutoff].copy()
+            map_period_label = (
+                f"{cutoff.strftime('%d %b %Y')} – {max_date.strftime('%d %b %Y')}"
             )
+
+    if map_geo.empty:
+        st.warning("No geocoded collisions in the last 12 months for current filters.")
+        return
+
+    st.caption(f"Map shows geocoded collisions in the last 12 months ({map_period_label}).")
+    point_count = len(map_geo)
+    hover_cols = [
+        c
+        for c in [
+            "collision_index",
+            "date",
+            "speed_limit",
+            "light_conditions_label",
+            "weather_conditions_label",
+        ]
+        if c in map_geo.columns
+    ]
+    map_fig = px.scatter_mapbox(
+        map_geo,
+        lat="latitude",
+        lon="longitude",
+        color=sev_col,
+        color_discrete_map=SEVERITY_COLORS,
+        zoom=5,
+        height=620,
+        hover_data=hover_cols if hover_cols else None,
+        title=f"Collision hotspots — last 12 months ({point_count:,} points)",
+        labels={
+            sev_col: "Collision Severity",
+            "latitude": "Latitude",
+            "longitude": "Longitude",
+            "collision_index": "Collision Index",
+            "date": "Date",
+            "speed_limit": "Speed Limit (mph)",
+            "light_conditions_label": "Light Conditions",
+            "weather_conditions_label": "Weather Conditions",
+        },
+    )
+    map_fig.update_layout(
+        mapbox_style="open-street-map",
+        mapbox=dict(zoom=5, center={"lat": 54.5, "lon": -2.5}),
+        margin={"l": 0, "r": 0, "t": 40, "b": 0},
+        hoverlabel=dict(
+            namelength=-1,
+            bgcolor="#1a2230",
+            font_size=12,
+            font_color="#e8edf5",
+        ),
+    )
+    if len(hover_cols) >= 5:
+        map_fig.update_traces(
+            hovertemplate=(
+                "<b>Collision Severity</b> = %{fullData.name}<br>"
+                "Latitude = %{lat}<br>"
+                "Longitude = %{lon}<br>"
+                "Collision Index = %{customdata[0]}<br>"
+                "Date = %{customdata[1]}<br>"
+                "Speed Limit (mph) = %{customdata[2]}<br>"
+                "Light Conditions = %{customdata[3]}<br>"
+                "Weather Conditions = %{customdata[4]}<extra></extra>"
+            )
+        )
+    marker_size = 5 if point_count <= 10_000 else 3 if point_count <= 100_000 else 2
+    marker_opacity = 0.85 if point_count <= 10_000 else 0.55 if point_count <= 100_000 else 0.35
+    map_fig.update_traces(marker=dict(size=marker_size, opacity=marker_opacity))
     plot_chart(map_fig, use_container_width=True)
 
     st.subheader("Top 10 Risk Districts")
     st.caption(HARM_INDEX_CAPTION)
-    fatal_collision = _series_or_default(geo, "collision_severity", 3) == 1
+    st.caption(f"District ranking uses the same 12-month map window ({map_period_label}).")
+    fatal_collision = _series_or_default(map_geo, "collision_severity", 3) == 1
     top_districts = (
-        geo.assign(fatal_collision=fatal_collision.astype(int))
+        map_geo.assign(fatal_collision=fatal_collision.astype(int))
         .groupby("district_display", dropna=False)
         .agg(
             Collisions=("collision_index", "count"),
