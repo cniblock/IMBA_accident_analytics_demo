@@ -170,6 +170,18 @@ def add_district_labels(df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def district_name_only(display: str | None) -> str:
+    """Return the human-readable district name without the ONS code suffix."""
+    if display is None or (isinstance(display, float) and pd.isna(display)):
+        return "Unknown"
+    text = str(display).strip()
+    if not text:
+        return "Unknown"
+    if "(" in text:
+        return text.split("(", 1)[0].strip() or text
+    return text
+
+
 def district_authority_lookup_frame(collision_view: pd.DataFrame) -> pd.DataFrame:
     """Build a safe district->current-authority lookup."""
     base = collision_view[["district_display"]].drop_duplicates().copy()

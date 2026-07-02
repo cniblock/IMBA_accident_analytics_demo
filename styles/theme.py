@@ -135,6 +135,8 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
               inset 0 1px 0 rgba(255, 255, 255, 0.04);
   position: relative;
   overflow: hidden;
+  min-height: 7.25rem;
+  box-sizing: border-box;
 }}
 
 [data-testid="stMetric"]::before {{
@@ -160,9 +162,152 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   font-size: 2.5rem !important;
   font-weight: 700 !important;
   color: {c["text"]} !important;
+  line-height: 1.15 !important;
+}}
+
+[data-testid="stMetricValue"] > div {{
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}}
+
+[data-testid="stMarkdownContainer"]:has(.imba-text-metric-slot) {{
+  margin-bottom: 0 !important;
+}}
+
+[data-testid="stMarkdownContainer"]:has(.imba-text-metric-slot) p {{
+  margin: 0 !important;
+  line-height: 0;
+}}
+
+.imba-text-metric-slot {{
+  height: 100%;
+  min-height: 7.25rem;
+}}
+
+.imba-text-metric {{
+  background: linear-gradient(160deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%);
+  border: 1px solid {c["card_border"]};
+  border-radius: 14px;
+  padding: 1rem 1.25rem 1.1rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35),
+              inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  min-height: 7.25rem;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+}}
+
+.imba-text-metric::before {{
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, {c["accent_glow"]} 0%, {c["accent"]} 55%, {c["kpi_bar_end"]} 100%);
+  box-shadow: 0 0 16px rgba(0, 212, 255, 0.45);
+}}
+
+.imba-text-metric-label {{
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: {c["text_muted"]};
+  margin-bottom: 0.35rem;
+  line-height: 1.3;
+  flex-shrink: 0;
+}}
+
+.imba-text-metric-body {{
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  overflow: hidden;
+}}
+
+.imba-text-metric-value {{
+  width: 100%;
+  font-size: clamp(0.85rem, 11cqi, 2.5rem);
+  font-weight: 700;
+  color: {c["text"]};
+  line-height: 1.15;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }}
 
 [data-testid="stPlotlyChart"] {{
+  background: linear-gradient(145deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%);
+  border: 1px solid {c["card_border"]};
+  border-radius: 14px;
+  padding: 0.35rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35),
+              inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}}
+
+[data-testid="stPlotlyChart"]:has(.mapboxgl-map),
+[data-testid="stPlotlyChart"]:has(.maplibregl-map) {{
+  overscroll-behavior: contain;
+}}
+
+[data-testid="stPlotlyChart"]:has(.mapboxgl-map) .modebar-container,
+[data-testid="stPlotlyChart"]:has(.maplibregl-map) .modebar-container {{
+  right: 3.25rem !important;
+  top: 0.35rem !important;
+}}
+
+[data-testid="stPlotlyChart"]:has(.mapboxgl-map) .js-plotly-plot,
+[data-testid="stPlotlyChart"]:has(.maplibregl-map) .js-plotly-plot {{
+  width: 100% !important;
+}}
+
+[data-testid="stPlotlyChart"]:has(.mapboxgl-map) .legend .scatterpts path,
+[data-testid="stPlotlyChart"]:has(.maplibregl-map) .legend .scatterpts path {{
+  transform: scale(1.45);
+  transform-origin: center;
+}}
+
+.georisk-legend {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.1rem;
+  margin: 0.35rem 0 0.75rem;
+  padding: 0.55rem 0.85rem;
+  background: rgba(26, 34, 48, 0.92);
+  border: 1px solid {c["card_border"]};
+  border-radius: 10px;
+  width: fit-content;
+  font-size: 0.82rem;
+  color: {c["text"]};
+}}
+
+.georisk-legend-item {{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}}
+
+.georisk-legend-dot {{
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}}
+
+[data-testid="stPydeckChart"] {{
   background: linear-gradient(145deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%);
   border: 1px solid {c["card_border"]};
   border-radius: 14px;
@@ -212,21 +357,31 @@ table.imba-table thead th {{
   z-index: 1;
   background: {c["dataframe_header"]};
   color: {c["text_muted"]};
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  padding: 0.7rem 1rem;
+  padding: 0.75rem 1rem;
   text-align: left;
   border-bottom: 2px solid {c["card_border"]};
   white-space: nowrap;
 }}
 
 table.imba-table tbody td {{
-  padding: 0.6rem 1rem;
+  padding: 0.72rem 1rem;
   color: {c["text"]};
   border-bottom: 1px solid rgba(42, 53, 72, 0.55);
   vertical-align: middle;
+  font-size: 0.9rem;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}}
+
+table.imba-table tbody td.imba-num,
+table.imba-table thead th.imba-num {{
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }}
 
 table.imba-table tbody tr:nth-child(even) td {{

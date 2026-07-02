@@ -9,6 +9,10 @@ import pandas as pd
 import streamlit as st
 from pandas.io.formats.style import Styler
 
+from data_loading import district_name_only
+
+DISTRICT_COLUMN_NAMES = {"District", "district_display"}
+
 
 def _format_display_df(df: pd.DataFrame) -> pd.DataFrame:
     """Format numeric columns for readable dashboard tables."""
@@ -36,8 +40,21 @@ def _styler_to_html(styler: Styler) -> str:
 
 
 def _df_to_html(df: pd.DataFrame) -> str:
-    display = _format_display_df(df)
+    base = df.reset_index(drop=True)
+    display = _format_display_df(base)
     escaped = display.copy()
+    numeric_cols = {
+        col
+        for col in escaped.columns
+        if pd.api.types.is_numeric_dtype(base[col])
+    }
+    district_titles: dict[tuple[int, str], str] = {}
+    for col in escaped.columns:
+        if col in DISTRICT_COLUMN_NAMES and col in base.columns:
+            for row_num, value in enumerate(base[col]):
+                if pd.notna(value) and str(value) != "nan":
+                    district_titles[(row_num, col)] = str(value)
+            escaped[col] = base[col].map(lambda v: district_name_only(v) if pd.notna(v) else "–")
     for col in escaped.columns:
         escaped[col] = escaped[col].map(
             lambda v: html.escape(str(v)) if pd.notna(v) and str(v) != "nan" else "–"
@@ -45,9 +62,18 @@ def _df_to_html(df: pd.DataFrame) -> str:
 
     header = "".join(f"<th>{html.escape(str(col))}</th>" for col in escaped.columns)
     rows = []
-    for _, row in escaped.iterrows():
-        cells = "".join(f"<td>{val}</td>" for val in row)
-        rows.append(f"<tr>{cells}</tr>")
+    for row_num, (_, row) in enumerate(escaped.iterrows()):
+        cells = []
+        for col in escaped.columns:
+            css = ' class="imba-num"' if col in numeric_cols else ""
+            cell_value = row[col]
+            title_key = (row_num, col)
+            if col in DISTRICT_COLUMN_NAMES and title_key in district_titles:
+                full_name = html.escape(district_titles[title_key])
+                cells.append(f'<td{css} title="{full_name}">{cell_value}</td>')
+            else:
+                cells.append(f"<td{css}>{cell_value}</td>")
+        rows.append(f"<tr>{''.join(cells)}</tr>")
 
     return (
         f'<table class="imba-table"><thead><tr>{header}</tr></thead>'

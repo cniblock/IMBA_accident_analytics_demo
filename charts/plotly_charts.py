@@ -74,11 +74,6 @@ def init_plotly_theme() -> None:
 
 def _is_map_figure(fig) -> bool:
     """True when the figure uses Mapbox/Geo traces (basemap must stay visible)."""
-    if getattr(fig.layout, "mapbox", None) is not None:
-        return True
-    geo = getattr(fig.layout, "geo", None)
-    if geo is not None and getattr(geo, "visible", False):
-        return True
     for trace in fig.data:
         trace_type = getattr(trace, "type", "") or ""
         if trace_type in {
@@ -95,18 +90,43 @@ def _is_map_figure(fig) -> bool:
     return False
 
 
+def _merge_legend(fig, default_legend: dict) -> dict:
+    """Preserve per-chart legend placement while applying theme styling."""
+    merged = default_legend.copy()
+    existing = fig.layout.legend
+    if not existing:
+        return merged
+    for key in (
+        "orientation",
+        "x",
+        "y",
+        "xanchor",
+        "yanchor",
+        "title",
+        "tracegroupgap",
+        "itemsizing",
+        "itemwidth",
+        "valign",
+    ):
+        val = getattr(existing, key, None)
+        if val is not None:
+            merged[key] = val
+    return merged
+
+
 def apply_chart_theme(fig):
     """Apply IMBA surface and axis styling to a Plotly figure."""
     is_map = _is_map_figure(fig)
+    default_legend = {
+        "font": {"color": COLORS["text"]},
+        "bgcolor": "rgba(26, 34, 48, 0.85)",
+        "bordercolor": COLORS["card_border"],
+    }
     layout_kwargs = {
         "paper_bgcolor": COLORS["card_grad_start"],
         "font": {"family": "Inter, sans-serif", "color": COLORS["text"], "size": 13},
         "title": {"font": {"size": 15, "color": COLORS["text"]}},
-        "legend": {
-            "font": {"color": COLORS["text"]},
-            "bgcolor": "rgba(26, 34, 48, 0.85)",
-            "bordercolor": COLORS["card_border"],
-        },
+        "legend": _merge_legend(fig, default_legend),
         "hoverlabel": {
             "bgcolor": COLORS["card"],
             "bordercolor": COLORS["card_border"],
@@ -116,6 +136,23 @@ def apply_chart_theme(fig):
     if is_map:
         # Opaque plot_bgcolor covers Mapbox/OSM tiles — keep the map surface clear.
         layout_kwargs["plot_bgcolor"] = "rgba(0,0,0,0)"
+        layout_kwargs["margin"] = {"l": 0, "r": 0, "t": 40, "b": 0}
+        # Overlay legend on the map (avoids a right-hand gutter and widens the map).
+        layout_kwargs["legend"] = {
+            "title": {"text": "Severity", "font": {"size": 12, "color": COLORS["text_muted"]}},
+            "font": {"color": COLORS["text"], "size": 12},
+            "bgcolor": "rgba(26, 34, 48, 0.88)",
+            "bordercolor": COLORS["card_border"],
+            "borderwidth": 1,
+            "x": 0.012,
+            "y": 0.99,
+            "xanchor": "left",
+            "yanchor": "top",
+            "orientation": "v",
+            "tracegroupgap": 8,
+            "itemsizing": "constant",
+            "itemwidth": 56,
+        }
     else:
         layout_kwargs["plot_bgcolor"] = COLORS["card_grad_end"]
 
@@ -129,4 +166,7 @@ def apply_chart_theme(fig):
 def plot_chart(fig, **kwargs) -> None:
     """Render a themed Plotly chart in Streamlit."""
     apply_chart_theme(fig)
+    if _is_map_figure(fig):
+        user_config = kwargs.pop("config", None) or {}
+        kwargs["config"] = {"scrollZoom": True, **user_config}
     st.plotly_chart(fig, **kwargs)

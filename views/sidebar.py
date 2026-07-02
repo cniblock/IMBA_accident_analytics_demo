@@ -24,7 +24,7 @@ INTELLIGENCE_PAGES = [
 _VEHICLE_LABELS = {
     "cars": "Cars",
     "motorbikes": "Motorbikes",
-    "both": "Cars or Motorbikes",
+    "both": "Cars & Motorbikes",
 }
 
 

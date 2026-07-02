@@ -10,6 +10,29 @@ from styles.dataframe import render_dataframe
 from transforms import ensure_label_columns as _ensure_label_columns, series_or_default as _series_or_default
 from views.constants import HARM_INDEX_CAPTION
 
+MAP_HEIGHT = 780
+MAP_CENTER = {"lat": 52.8, "lon": -2.0}
+MAP_ZOOM = 5.2
+
+POINT_VISIBILITY_OPTIONS = ["Overview", "Standard", "Zoomed in", "High visibility"]
+
+
+def _marker_style(point_visibility: str, n_points: int) -> tuple[int, float]:
+    if point_visibility == "Overview":
+        marker_size = 4 if n_points <= 10_000 else 3 if n_points <= 100_000 else 2
+        marker_opacity = 0.55 if n_points <= 100_000 else 0.35
+    elif point_visibility == "Standard":
+        marker_size = 7 if n_points <= 10_000 else 5 if n_points <= 100_000 else 4
+        marker_opacity = 0.70 if n_points <= 100_000 else 0.45
+    elif point_visibility == "Zoomed in":
+        marker_size = 11 if n_points <= 10_000 else 8 if n_points <= 100_000 else 6
+        marker_opacity = 0.85 if n_points <= 100_000 else 0.60
+    else:
+        marker_size = 15 if n_points <= 10_000 else 11 if n_points <= 100_000 else 8
+        marker_opacity = 0.95 if n_points <= 100_000 else 0.70
+    return marker_size, marker_opacity
+
+
 def page_georisk_map(collision_view: pd.DataFrame) -> None:
     st.title("GeoRisk Map")
     collision_view = _ensure_label_columns(
@@ -21,14 +44,6 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
         return
     geo = collision_view.dropna(subset=["latitude", "longitude"]).copy()
     sev_col = "collision_severity_label" if "collision_severity_label" in geo.columns else "collision_severity"
-    severity_opts = sorted(geo[sev_col].dropna().astype(str).unique().tolist())
-    severity_filter = st.multiselect(
-        "Severity",
-        options=severity_opts,
-        default=severity_opts,
-    )
-    if severity_filter:
-        geo = geo[geo[sev_col].astype(str).isin(severity_filter)]
 
     if geo.empty:
         st.warning("No geocoded collisions available for current filters.")
@@ -50,8 +65,22 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
         st.warning("No geocoded collisions in the last 12 months for current filters.")
         return
 
-    st.caption(f"Map shows geocoded collisions in the last 12 months ({map_period_label}).")
+    st.caption(
+        f"Map shows geocoded collisions in the last 12 months ({map_period_label}). "
+        "Click a severity in the map legend to show or hide that group. "
+        "Scroll the mouse wheel over the map to zoom in and out."
+    )
     point_count = len(map_geo)
+    point_visibility = st.radio(
+        "Point visibility",
+        POINT_VISIBILITY_OPTIONS,
+        horizontal=True,
+        index=1,
+        help=(
+            "Marker size is fixed in pixels — switch to Zoomed in or High visibility "
+            "after panning to street level. Overview keeps the UK-wide view less dense."
+        ),
+    )
     hover_cols = [
         c
         for c in [
@@ -63,18 +92,20 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
         ]
         if c in map_geo.columns
     ]
-    map_fig = px.scatter_mapbox(
+    map_fig = px.scatter_map(
         map_geo,
         lat="latitude",
         lon="longitude",
         color=sev_col,
         color_discrete_map=SEVERITY_COLORS,
-        zoom=5,
-        height=620,
+        zoom=MAP_ZOOM,
+        center=MAP_CENTER,
+        map_style="open-street-map",
+        height=MAP_HEIGHT,
         hover_data=hover_cols if hover_cols else None,
         title=f"Collision hotspots — last 12 months ({point_count:,} points)",
         labels={
-            sev_col: "Collision Severity",
+            sev_col: "Severity",
             "latitude": "Latitude",
             "longitude": "Longitude",
             "collision_index": "Collision Index",
@@ -85,9 +116,10 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
         },
     )
     map_fig.update_layout(
-        mapbox_style="open-street-map",
-        mapbox=dict(zoom=5, center={"lat": 54.5, "lon": -2.5}),
+        map=dict(zoom=MAP_ZOOM, center=MAP_CENTER, style="open-street-map"),
         margin={"l": 0, "r": 0, "t": 40, "b": 0},
+        uirevision="georisk-map",
+        dragmode="pan",
         hoverlabel=dict(
             namelength=-1,
             bgcolor="#1a2230",
@@ -108,8 +140,7 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
                 "Weather Conditions = %{customdata[4]}<extra></extra>"
             )
         )
-    marker_size = 5 if point_count <= 10_000 else 3 if point_count <= 100_000 else 2
-    marker_opacity = 0.85 if point_count <= 10_000 else 0.55 if point_count <= 100_000 else 0.35
+    marker_size, marker_opacity = _marker_style(point_visibility, point_count)
     map_fig.update_traces(marker=dict(size=marker_size, opacity=marker_opacity))
     plot_chart(map_fig, use_container_width=True)
 
