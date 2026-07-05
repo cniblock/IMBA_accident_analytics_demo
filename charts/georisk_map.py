@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import inspect
 
 import pandas as pd
 import plotly.express as px
@@ -162,7 +163,29 @@ def _render_pydeck_map(
     )
     st.subheader(f"Collision hotspots — last 12 months ({point_count:,} points)")
     _render_georisk_legend()
-    st.pydeck_chart(deck, use_container_width=True, height=MAP_HEIGHT)
+    _render_pydeck_chart(deck)
+
+
+def _render_pydeck_chart(deck) -> None:
+    """Render pydeck with height when supported (SiS warehouse runtimes use older Streamlit)."""
+    kwargs: dict = {"use_container_width": True}
+    if "height" in inspect.signature(st.pydeck_chart).parameters:
+        kwargs["height"] = MAP_HEIGHT
+    else:
+        st.markdown(
+            f"""
+<style>
+.stApp [data-testid="stPydeckChart"],
+.stApp [data-testid="stPydeckChart"] > div,
+.stApp [data-testid="stPydeckChart"] iframe {{
+  height: {MAP_HEIGHT}px !important;
+  min-height: {MAP_HEIGHT}px !important;
+}}
+</style>
+""",
+            unsafe_allow_html=True,
+        )
+    st.pydeck_chart(deck, **kwargs)
 
 
 def render_georisk_map(
