@@ -2,17 +2,12 @@
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
 import streamlit as st
 
-from charts.plotly_charts import plot_chart, SEVERITY_COLORS
+from charts.georisk_map import render_georisk_map
 from styles.dataframe import render_dataframe
 from transforms import ensure_label_columns as _ensure_label_columns, series_or_default as _series_or_default
 from views.constants import HARM_INDEX_CAPTION
-
-MAP_HEIGHT = 780
-MAP_CENTER = {"lat": 52.8, "lon": -2.0}
-MAP_ZOOM = 5.2
 
 POINT_VISIBILITY_OPTIONS = ["Overview", "Standard", "Zoomed in", "High visibility"]
 
@@ -92,57 +87,15 @@ def page_georisk_map(collision_view: pd.DataFrame) -> None:
         ]
         if c in map_geo.columns
     ]
-    map_fig = px.scatter_map(
-        map_geo,
-        lat="latitude",
-        lon="longitude",
-        color=sev_col,
-        color_discrete_map=SEVERITY_COLORS,
-        zoom=MAP_ZOOM,
-        center=MAP_CENTER,
-        map_style="open-street-map",
-        height=MAP_HEIGHT,
-        hover_data=hover_cols if hover_cols else None,
-        title=f"Collision hotspots — last 12 months ({point_count:,} points)",
-        labels={
-            sev_col: "Severity",
-            "latitude": "Latitude",
-            "longitude": "Longitude",
-            "collision_index": "Collision Index",
-            "date": "Date",
-            "speed_limit": "Speed Limit (mph)",
-            "light_conditions_label": "Light Conditions",
-            "weather_conditions_label": "Weather Conditions",
-        },
-    )
-    map_fig.update_layout(
-        map=dict(zoom=MAP_ZOOM, center=MAP_CENTER, style="open-street-map"),
-        margin={"l": 0, "r": 0, "t": 40, "b": 0},
-        uirevision="georisk-map",
-        dragmode="pan",
-        hoverlabel=dict(
-            namelength=-1,
-            bgcolor="#1a2230",
-            font_size=12,
-            font_color="#e8edf5",
-        ),
-    )
-    if len(hover_cols) >= 5:
-        map_fig.update_traces(
-            hovertemplate=(
-                "<b>Collision Severity</b> = %{fullData.name}<br>"
-                "Latitude = %{lat}<br>"
-                "Longitude = %{lon}<br>"
-                "Collision Index = %{customdata[0]}<br>"
-                "Date = %{customdata[1]}<br>"
-                "Speed Limit (mph) = %{customdata[2]}<br>"
-                "Light Conditions = %{customdata[3]}<br>"
-                "Weather Conditions = %{customdata[4]}<extra></extra>"
-            )
-        )
     marker_size, marker_opacity = _marker_style(point_visibility, point_count)
-    map_fig.update_traces(marker=dict(size=marker_size, opacity=marker_opacity))
-    plot_chart(map_fig, use_container_width=True)
+    render_georisk_map(
+        map_geo,
+        sev_col=sev_col,
+        point_visibility=point_visibility,
+        marker_size=marker_size,
+        marker_opacity=marker_opacity,
+        hover_cols=hover_cols,
+    )
 
     st.subheader("Top 10 Risk Districts")
     st.caption(HARM_INDEX_CAPTION)

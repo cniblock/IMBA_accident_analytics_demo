@@ -46,6 +46,8 @@ Subsequent app starts will load from Parquet (3–10× faster) and skip view com
 
 Ensure the deployed repo includes `.streamlit/config.toml` and `styles/theme.css` on the same commit as `app.py`. KPI cards and sidebar nav use **HTML metrics** and **scoped CSS containers** (Snowflake Custom UI pattern) so styling matches local even when global `data-testid` overrides apply.
 
+**GeoRisk Map:** Snowflake's content security policy blocks OpenStreetMap tiles used by Plotly. On SiS the map uses `st.pydeck_chart` with Mapbox basemaps (requires External Offerings Terms acknowledgement on warehouse runtimes).
+
 If anything still looks unstyled, enable `IMBA_THEME_DEBUG=1` and confirm `CSS exists: True` in the sidebar.
 
 ## Pages
