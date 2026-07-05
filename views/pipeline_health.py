@@ -5,6 +5,7 @@ import streamlit as st
 
 from config import CODE_MAPS
 from data_loading import has_provisional_data
+from styles.metrics import render_metric
 from styles.dataframe import render_dataframe
 from views.constants import PROVISIONAL_DATA_NOTICE
 
@@ -34,9 +35,12 @@ def page_pipeline_health(
     st.markdown("---")
 
     row1, row2, row3 = st.columns(3)
-    row1.metric("Collisions rows", f"{len(collisions):,}")
-    row2.metric("Vehicles rows", f"{len(vehicles):,}")
-    row3.metric("Casualties rows", f"{len(casualties):,}")
+    with row1:
+        render_metric("Collisions rows", f"{len(collisions):,}")
+    with row2:
+        render_metric("Vehicles rows", f"{len(vehicles):,}")
+    with row3:
+        render_metric("Casualties rows", f"{len(casualties):,}")
 
     collisions_keys = set(collisions["collision_index"].dropna().astype(str))
     vehicles_keys = set(vehicles["collision_index"].dropna().astype(str))
@@ -77,8 +81,8 @@ def page_pipeline_health(
     duplicates_rate = 100 * (
         collisions.duplicated(subset=["collision_index"]).mean()
     )
-    st.metric("Collisions casualty-count mismatch", f"{mismatch_rate:.2f}%")
-    st.metric("Duplicate collision_index rows", f"{duplicates_rate:.4f}%")
+    render_metric("Collisions casualty-count mismatch", f"{mismatch_rate:.2f}%")
+    render_metric("Duplicate collision_index rows", f"{duplicates_rate:.4f}%")
 
     st.subheader("Code Decoding Dictionary (sample)")
     dict_rows = []

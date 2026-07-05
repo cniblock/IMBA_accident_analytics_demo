@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from charts.plotly_charts import plot_chart, SEVERITY_COLORS
+from styles.metrics import render_metric
 from styles.dataframe import render_dataframe
 from styles.theme import COLORS
 from transforms import ensure_label_columns as _ensure_label_columns, safe_ratio as _safe_ratio, series_or_default as _series_or_default
@@ -501,13 +502,16 @@ def page_risk_factors(collision_view: pd.DataFrame) -> None:
         )
 
         hz1, hz2, hz3 = st.columns(3)
-        hz1.metric("Hazard/special-condition collisions", f"{hazard_n:,}")
-        hz2.metric("Hazard collision share", f"{hazard_share:.1f}%")
-        hz3.metric(
-            "KSI rate when hazard present",
-            f"{hazard_ksi_rate:.1f}%",
-            help=f"Compared with {no_hazard_ksi_rate:.1f}% when no hazard or special condition is recorded.",
-        )
+        with hz1:
+            render_metric("Hazard/special-condition collisions", f"{hazard_n:,}")
+        with hz2:
+            render_metric("Hazard collision share", f"{hazard_share:.1f}%")
+        with hz3:
+            render_metric(
+                "KSI rate when hazard present",
+                f"{hazard_ksi_rate:.1f}%",
+                help_text=f"Compared with {no_hazard_ksi_rate:.1f}% when no hazard or special condition is recorded.",
+            )
         st.caption(f"KSI rate without hazard recorded: **{no_hazard_ksi_rate:.1f}%**.")
 
         st.markdown("**Where collisions are more likely to result in KSI**")

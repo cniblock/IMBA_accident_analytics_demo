@@ -11,7 +11,7 @@ import streamlit as st
 from charts.plotly_charts import plot_chart, SEVERITY_COLORS
 from data_loading import district_name_only
 from styles.dataframe import render_dataframe
-from styles.metrics import render_text_metric
+from styles.metrics import render_metric, render_text_metric
 from styles.theme import COLORS
 from views.constants import (
     HARM_INDEX_CAPTION,
@@ -333,42 +333,49 @@ def page_executive_overview(
     cases_this_week = int(weekly.iloc[-1]["collisions"]) if len(weekly) else 0
 
     col1, col2, col3, col4, col5 = st.columns(5)
-    col1.metric(
-        "Collision records",
-        f"{total_collisions:,}",
-        help="STATS19 collision events in the current filter selection.",
-        **_period_delta(collision_view, _collision_count),
-    )
-    col2.metric(
-        "KSI casualties",
-        f"{ksi:,}",
-        help="Killed or seriously injured people (fatal + serious casualties).",
-        **_period_delta(collision_view, _ksi_sum),
-    )
-    col3.metric(
-        "Fatal casualties",
-        f"{fatal:,}",
-        help="People killed across all collisions in the current filter selection.",
-        **_period_delta(collision_view, lambda d: _sum_col(d, "fatal_casualties")),
-    )
-    col4.metric(
-        "KSI rate per 1,000 collisions",
-        f"{ksi_rate:.1f}",
-        help="KSI casualties divided by collision records, scaled per 1,000 events.",
-        **_period_delta(collision_view, _ksi_rate_per_1k),
-    )
-    col5.metric(
-        "Night-time collision share",
-        f"{dark_pct:.1f}%",
-        help=NIGHT_TIME_DEFINITION,
-        **_period_delta(collision_view, _dark_share_pct, inverse=False),
-    )
+    with col1:
+        render_metric(
+            "Collision records",
+            f"{total_collisions:,}",
+            help_text="STATS19 collision events in the current filter selection.",
+            **_period_delta(collision_view, _collision_count),
+        )
+    with col2:
+        render_metric(
+            "KSI casualties",
+            f"{ksi:,}",
+            help_text="Killed or seriously injured people (fatal + serious casualties).",
+            **_period_delta(collision_view, _ksi_sum),
+        )
+    with col3:
+        render_metric(
+            "Fatal casualties",
+            f"{fatal:,}",
+            help_text="People killed across all collisions in the current filter selection.",
+            **_period_delta(collision_view, lambda d: _sum_col(d, "fatal_casualties")),
+        )
+    with col4:
+        render_metric(
+            "KSI rate per 1,000 collisions",
+            f"{ksi_rate:.1f}",
+            help_text="KSI casualties divided by collision records, scaled per 1,000 events.",
+            **_period_delta(collision_view, _ksi_rate_per_1k),
+        )
+    with col5:
+        render_metric(
+            "Night-time collision share",
+            f"{dark_pct:.1f}%",
+            help_text=NIGHT_TIME_DEFINITION,
+            **_period_delta(collision_view, _dark_share_pct, inverse=False),
+        )
 
     st.caption("KPI deltas compare the **last 12 months** to the **prior 12 months** (by latest date in view).")
 
     os1, os2, os3, os4, os5 = st.columns(5)
-    os1.metric("Collisions in latest week", f"{cases_this_week:,}")
-    os2.metric("Districts with worsening trend", districts_worsening_count)
+    with os1:
+        render_metric("Collisions in latest week", f"{cases_this_week:,}")
+    with os2:
+        render_metric("Districts with worsening trend", districts_worsening_count)
     with os3:
         render_text_metric(
             "Highest-risk district",
@@ -377,11 +384,15 @@ def page_executive_overview(
             title=str(top_district_name),
         )
     if operational_stats is not None:
-        os4.metric("Last data refresh", operational_stats.get("max_date_str", "–"))
-        os5.metric("Records ingested this cycle", f"{operational_stats.get('total_records', 0):,}")
+        with os4:
+            render_metric("Last data refresh", operational_stats.get("max_date_str", "–"))
+        with os5:
+            render_metric("Records ingested this cycle", f"{operational_stats.get('total_records', 0):,}")
     else:
-        os4.metric("Last data refresh", "–")
-        os5.metric("Records ingested this cycle", "–")
+        with os4:
+            render_metric("Last data refresh", "–")
+        with os5:
+            render_metric("Records ingested this cycle", "–")
 
     monthly_agg = {"collisions": ("collision_index", "count")}
     if "fatal_casualties" in collision_view.columns:

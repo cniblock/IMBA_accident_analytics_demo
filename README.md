@@ -44,7 +44,9 @@ Subsequent app starts will load from Parquet (3–10× faster) and skip view com
 
 ## Deploy to Snowflake Streamlit
 
-Ensure the deployed repo includes `.streamlit/config.toml` and `styles/theme.css` on the same commit as `app.py`. If KPI cards or sidebar nav look unstyled, enable `IMBA_THEME_DEBUG=1` and confirm `CSS exists: True` in the sidebar.
+Ensure the deployed repo includes `.streamlit/config.toml` and `styles/theme.css` on the same commit as `app.py`. KPI cards and sidebar nav use **HTML metrics** and **scoped CSS containers** (Snowflake Custom UI pattern) so styling matches local even when global `data-testid` overrides apply.
+
+If anything still looks unstyled, enable `IMBA_THEME_DEBUG=1` and confirm `CSS exists: True` in the sidebar.
 
 ## Pages
 

@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from charts.plotly_charts import plot_chart, SEVERITY_COLORS
+from styles.metrics import render_metric
 from styles.dataframe import render_dataframe
 from styles.theme import COLORS
 from transforms import (
@@ -194,11 +195,16 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
     avg_harm_score = vehicle_data["harm_score"].mean()
 
     k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("Vehicle records", f"{total_vehicle_rows:,}")
-    k2.metric("Linked collisions", f"{total_collisions:,}")
-    k3.metric("Avg driver age", f"{avg_driver_age:.1f}" if pd.notna(avg_driver_age) else "N/A")
-    k4.metric("Avg triage score", f"{avg_risk_score:.1f}" if pd.notna(avg_risk_score) else "N/A")
-    k5.metric("Avg harm score", f"{avg_harm_score:.1f}" if pd.notna(avg_harm_score) else "N/A")
+    with k1:
+        render_metric("Vehicle records", f"{total_vehicle_rows:,}")
+    with k2:
+        render_metric("Linked collisions", f"{total_collisions:,}")
+    with k3:
+        render_metric("Avg driver age", f"{avg_driver_age:.1f}" if pd.notna(avg_driver_age) else "N/A")
+    with k4:
+        render_metric("Avg triage score", f"{avg_risk_score:.1f}" if pd.notna(avg_risk_score) else "N/A")
+    with k5:
+        render_metric("Avg harm score", f"{avg_harm_score:.1f}" if pd.notna(avg_harm_score) else "N/A")
 
     with st.expander("How triage and harm scores are calculated"):
         st.markdown(SCORE_DEFINITIONS)
@@ -399,10 +405,14 @@ def page_vehicle_intelligence(vehicle_view: pd.DataFrame) -> None:
             / max(1, (vehicle_data["loss_of_control_flag"] == 1).sum())
         )
         loc1, loc2, loc3, loc4 = st.columns(4)
-        loc1.metric("Loss-of-control vehicle-record rate", f"{vehicle_data['loss_of_control_flag'].mean() * 100:.1f}%")
-        loc2.metric("Roadway-departure vehicle-record rate", f"{vehicle_data['roadway_departure_flag'].mean() * 100:.1f}%")
-        loc3.metric("Off-carriageway impact vehicle-record rate", f"{vehicle_data['impact_off_carriageway_flag'].mean() * 100:.1f}%")
-        loc4.metric("Serious/fatal involvement among LOC records", f"{severe_rate_loc:.1f}%")
+        with loc1:
+            render_metric("Loss-of-control vehicle-record rate", f"{vehicle_data['loss_of_control_flag'].mean() * 100:.1f}%")
+        with loc2:
+            render_metric("Roadway-departure vehicle-record rate", f"{vehicle_data['roadway_departure_flag'].mean() * 100:.1f}%")
+        with loc3:
+            render_metric("Off-carriageway impact vehicle-record rate", f"{vehicle_data['impact_off_carriageway_flag'].mean() * 100:.1f}%")
+        with loc4:
+            render_metric("Serious/fatal involvement among LOC records", f"{severe_rate_loc:.1f}%")
 
         loc_conditions = (
             vehicle_data.groupby("road_surface_conditions_label", dropna=False)

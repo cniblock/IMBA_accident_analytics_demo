@@ -11,7 +11,7 @@ import streamlit as st
 from charts.plotly_charts import plot_chart
 from data_loading import add_district_labels as _add_district_labels, district_name_only
 from styles.dataframe import render_dataframe
-from styles.metrics import render_text_metric
+from styles.metrics import render_metric, render_text_metric
 from styles.theme import COLORS
 from transforms import (
     REQUIRED_CASUALTY_VIEW_COLUMNS,
@@ -260,31 +260,43 @@ def page_casualty_intelligence(casualty_person_view: pd.DataFrame, casualty_link
 
     st.markdown("### Casualty snapshot")
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("Casualties", f"{len(data):,}")
-    c2.metric(fatal_metric_label, f"{int(data['fatal_flag'].sum()):,}")
-    c3.metric(
-        serious_metric_label,
-        f"{data['serious_flag'].sum():,.1f}" if ksi_definition == "Adjusted severity estimate" else f"{int(data['serious_flag'].sum()):,}",
-    )
-    c4.metric(
-        slight_metric_label,
-        f"{data['slight_flag'].sum():,.1f}" if ksi_definition == "Adjusted severity estimate" else f"{int(data['slight_flag'].sum()):,}",
-    )
-    c5.metric(KSI_SHARE_LABEL, f"{data['ksi_flag'].mean() * 100:.1f}%")
+    with c1:
+        render_metric("Casualties", f"{len(data):,}")
+    with c2:
+        render_metric(fatal_metric_label, f"{int(data['fatal_flag'].sum()):,}")
+    with c3:
+        render_metric(
+            serious_metric_label,
+            f"{data['serious_flag'].sum():,.1f}" if ksi_definition == "Adjusted severity estimate" else f"{int(data['serious_flag'].sum()):,}",
+        )
+    with c4:
+        render_metric(
+            slight_metric_label,
+            f"{data['slight_flag'].sum():,.1f}" if ksi_definition == "Adjusted severity estimate" else f"{int(data['slight_flag'].sum()):,}",
+        )
+    with c5:
+        render_metric(KSI_SHARE_LABEL, f"{data['ksi_flag'].mean() * 100:.1f}%")
     st.caption(f"{rate_caption} {KSI_SHARE_DEFINITION}")
 
     extra1, extra2, extra3, extra4, extra5 = st.columns(5)
-    extra1.metric("Pedestrian KSI share", f"{(data[data['casualty_class'] == 3]['ksi_flag'].mean() * 100):.1f}%" if (data["casualty_class"] == 3).any() else "N/A")
-    extra2.metric("Cyclist KSI share", f"{(data[data['casualty_type'] == 1]['ksi_flag'].mean() * 100):.1f}%" if (data["casualty_type"] == 1).any() else "N/A")
-    extra3.metric("Under-16 KSI share", f"{(data[data['age_of_casualty'] <= 16]['ksi_flag'].mean() * 100):.1f}%" if (data["age_of_casualty"] <= 16).any() else "N/A")
-    extra4.metric("75+ KSI share", f"{(data[data['age_of_casualty'] >= 75]['ksi_flag'].mean() * 100):.1f}%" if (data["age_of_casualty"] >= 75).any() else "N/A")
-    extra5.metric("% casualties in darkness", f"{(data['is_dark'].mean() * 100):.1f}%")
+    with extra1:
+        render_metric("Pedestrian KSI share", f"{(data[data['casualty_class'] == 3]['ksi_flag'].mean() * 100):.1f}%" if (data["casualty_class"] == 3).any() else "N/A")
+    with extra2:
+        render_metric("Cyclist KSI share", f"{(data[data['casualty_type'] == 1]['ksi_flag'].mean() * 100):.1f}%" if (data["casualty_type"] == 1).any() else "N/A")
+    with extra3:
+        render_metric("Under-16 KSI share", f"{(data[data['age_of_casualty'] <= 16]['ksi_flag'].mean() * 100):.1f}%" if (data["age_of_casualty"] <= 16).any() else "N/A")
+    with extra4:
+        render_metric("75+ KSI share", f"{(data[data['age_of_casualty'] >= 75]['ksi_flag'].mean() * 100):.1f}%" if (data["age_of_casualty"] >= 75).any() else "N/A")
+    with extra5:
+        render_metric("% casualties in darkness", f"{(data['is_dark'].mean() * 100):.1f}%")
 
     group_insight, hour_insight, district_insight, district_full = _build_casualty_insights(data)
     st.markdown("#### Insight summary")
     i1, i2, i3 = st.columns(3)
-    i1.metric("Highest KSI group", group_insight.replace("**", ""))
-    i2.metric("Peak KSI hour", hour_insight.replace("**", ""))
+    with i1:
+        render_text_metric("Highest KSI group", group_insight.replace("**", ""))
+    with i2:
+        render_text_metric("Peak KSI hour", hour_insight.replace("**", ""))
     with i3:
         render_text_metric(
             "Highest harm district",

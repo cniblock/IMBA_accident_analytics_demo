@@ -8,6 +8,7 @@ import streamlit as st
 
 from config import CODE_MAPS
 from data_loading import resolve_district_display as _resolve_district_display
+from styles.container import FILTER_RADIO_CSS, NAV_RADIO_CSS, stylable_container
 from transforms import as_int_if_possible as _as_int_if_possible
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -68,12 +69,13 @@ def render_sidebar_logo() -> None:
 
 def render_intelligence_nav() -> str:
     st.sidebar.header("Intelligence Modules")
-    return st.sidebar.radio(
-        "Select intelligence module",
-        options=INTELLIGENCE_PAGES,
-        key="intelligence_module",
-        label_visibility="collapsed",
-    )
+    with stylable_container("imba_intelligence_nav", NAV_RADIO_CSS, parent=st.sidebar):
+        return st.radio(
+            "Select intelligence module",
+            options=INTELLIGENCE_PAGES,
+            key="intelligence_module",
+            label_visibility="collapsed",
+        )
 
 
 def apply_sidebar_filters(collision_view: pd.DataFrame) -> pd.DataFrame:
@@ -87,13 +89,14 @@ def apply_sidebar_filters(collision_view: pd.DataFrame) -> pd.DataFrame:
     )
 
     with st.sidebar.expander("Vehicle Type", expanded=True):
-        vehicle_type_filter = st.radio(
-            "Show collisions involving",
-            options=["cars", "motorbikes", "both"],
-            index=2,
-            format_func=lambda x: _VEHICLE_LABELS[x],
-            key="vehicle_type_filter",
-        )
+        with stylable_container("imba_vehicle_type_filter", FILTER_RADIO_CSS):
+            vehicle_type_filter = st.radio(
+                "Show collisions involving",
+                options=["cars", "motorbikes", "both"],
+                index=2,
+                format_func=lambda x: _VEHICLE_LABELS[x],
+                key="vehicle_type_filter",
+            )
 
     min_date = collision_view["date"].min()
     max_date = collision_view["date"].max()

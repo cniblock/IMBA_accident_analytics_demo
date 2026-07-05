@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import os
-import re
 from pathlib import Path
 
 import streamlit as st
@@ -177,20 +176,24 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   text-overflow: ellipsis;
 }}
 
+[data-testid="stMarkdownContainer"]:has(.imba-metric-slot),
 [data-testid="stMarkdownContainer"]:has(.imba-text-metric-slot) {{
   margin-bottom: 0 !important;
 }}
 
+[data-testid="stMarkdownContainer"]:has(.imba-metric-slot) p,
 [data-testid="stMarkdownContainer"]:has(.imba-text-metric-slot) p {{
   margin: 0 !important;
   line-height: 0;
 }}
 
+.imba-metric-slot,
 .imba-text-metric-slot {{
   height: 100%;
   min-height: 7.25rem;
 }}
 
+.imba-metric,
 .imba-text-metric {{
   background: linear-gradient(160deg, {c["card_grad_start"]} 0%, {c["card_grad_end"]} 100%);
   border: 1px solid {c["card_border"]};
@@ -205,9 +208,14 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}}
+
+.imba-metric-text,
+.imba-text-metric {{
   container-type: inline-size;
 }}
 
+.imba-metric::before,
 .imba-text-metric::before {{
   content: "";
   position: absolute;
@@ -219,6 +227,7 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   box-shadow: 0 0 16px rgba(0, 212, 255, 0.45);
 }}
 
+.imba-metric-label,
 .imba-text-metric-label {{
   font-size: 0.9rem;
   font-weight: 600;
@@ -230,6 +239,7 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   flex-shrink: 0;
 }}
 
+.imba-metric-body,
 .imba-text-metric-body {{
   flex: 1;
   display: flex;
@@ -238,19 +248,55 @@ h2, h3, [data-testid="stHeadingWithActionElements"] h2,
   overflow: hidden;
 }}
 
+.imba-metric-value,
 .imba-text-metric-value {{
   width: 100%;
-  font-size: clamp(0.85rem, 11cqi, 2.5rem);
+  font-size: 2.5rem;
   font-weight: 700;
   color: {c["text"]};
   line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}}
+
+.imba-metric-value-text,
+.imba-text-metric-value {{
+  font-size: clamp(0.85rem, 11cqi, 2.5rem);
+  white-space: normal;
   word-wrap: break-word;
   overflow-wrap: anywhere;
   hyphens: auto;
-  overflow: hidden;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
+}}
+
+.imba-metric-delta {{
+  margin-top: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  width: fit-content;
+  max-width: 100%;
+  line-height: 1.3;
+  flex-shrink: 0;
+}}
+
+.imba-metric-delta-good {{
+  color: {c["positive"]};
+  background: rgba(34, 197, 94, 0.12);
+}}
+
+.imba-metric-delta-bad {{
+  color: {c["negative"]};
+  background: rgba(239, 68, 68, 0.12);
+}}
+
+.imba-metric-delta-neutral {{
+  color: {c["text_muted"]};
+  background: rgba(148, 163, 184, 0.1);
 }}
 
 .stApp [data-testid="stPlotlyChart"] {{
@@ -521,19 +567,39 @@ div[data-testid="stRadio"] div[role="radiogroup"] > label:has(input:checked) {{
 """
 
 
+def _scope_single_selector(selector: str) -> str:
+    """Prefix one selector with .stApp (skip :root and already-scoped selectors)."""
+    sel = selector.strip()
+    if not sel or sel.startswith(".stApp") or sel.startswith(":root"):
+        return sel
+    return f".stApp {sel}"
+
+
 def _scope_css_for_hosted_streamlit(css: str) -> str:
-    """Raise selector specificity so theme CSS wins on hosted Streamlit (1.42+)."""
-    css = re.sub(r"(?<!\.stApp )\[data-testid=", ".stApp [data-testid=", css)
-    css = re.sub(r"(?<!\.stApp )div\[data-testid=", ".stApp div[data-testid=", css)
-    css = re.sub(r"(?<!\.stApp )\.stCaption", ".stApp .stCaption", css)
-    css = re.sub(r"(?<!\.stApp )\.stDownloadButton", ".stApp .stDownloadButton", css)
-    css = re.sub(r"(?<!\.stApp )\.imba-", ".stApp .imba-", css)
-    css = re.sub(r"(?<!\.stApp )\.georisk-", ".stApp .georisk-", css)
-    css = re.sub(r"(?<!\.stApp )table\.imba-table", ".stApp table.imba-table", css)
-    css = re.sub(r"^h1,", ".stApp h1,", css, flags=re.MULTILINE)
-    css = re.sub(r"^h2, h3,", ".stApp h2, .stApp h3,", css, flags=re.MULTILINE)
-    css = re.sub(r"(?<!\.stApp )h1\.imba-page-title", ".stApp h1.imba-page-title", css)
-    return css
+    """Prefix each rule selector with .stApp once so hosted Streamlit themes do not win."""
+    out: list[str] = []
+    i = 0
+    while i < len(css):
+        brace = css.find("{", i)
+        if brace == -1:
+            out.append(css[i:])
+            break
+        selector_part = css[i:brace]
+        close = css.find("}", brace)
+        if close == -1:
+            out.append(css[i:])
+            break
+        body = css[brace : close + 1]
+        stripped = selector_part.strip()
+        if stripped.startswith("@"):
+            out.append(selector_part + body)
+        else:
+            scoped = ",".join(
+                _scope_single_selector(part) for part in selector_part.split(",") if part.strip()
+            )
+            out.append(scoped + body)
+        i = close + 1
+    return "".join(out)
 
 
 def _load_theme_css() -> tuple[str, str]:
