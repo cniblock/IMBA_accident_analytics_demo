@@ -19,6 +19,8 @@ MAP_ZOOM = 5.2
 PYDECK_MAP_STYLE = "mapbox://styles/mapbox/dark-v11"
 
 _SEVERITY_CODE_LABELS = {1: "Fatal", 2: "Serious", 3: "Slight"}
+# SiS warehouse runtimes enforce a 32 MB browser message limit.
+SNOWFLAKE_PYDECK_POINT_CAP = 12_000
 
 
 def _hex_to_rgba(hex_color: str, alpha: int) -> list[int]:
@@ -30,6 +32,60 @@ def _severity_labels(map_geo: pd.DataFrame, sev_col: str) -> pd.Series:
     if sev_col == "collision_severity":
         return map_geo[sev_col].map(_SEVERITY_CODE_LABELS).fillna("Unknown")
     return map_geo[sev_col].astype("string").fillna("Unknown")
+
+
+def _sample_points_stratified(points: pd.DataFrame, max_points: int) -> pd.DataFrame:
+    """Downsample while preserving severity mix (for SiS 32 MB message limit)."""
+    if len(points) <= max_points:
+        return points
+
+    sample_prob = max_points / len(points)
+    sampled = points.groupby("severity_label", observed=True, group_keys=False).apply(
+        lambda group: group.sample(
+            n=max(1, min(len(group), int(round(len(group) * sample_prob)))),
+            random_state=42,
+        ),
+        include_groups=False,
+    )
+    if len(sampled) > max_points:
+        sampled = sampled.sample(n=max_points, random_state=42)
+    return sampled.reset_index(drop=True)
+
+
+def _prepare_pydeck_points(
+    map_geo: pd.DataFrame,
+    *,
+    sev_col: str,
+    marker_opacity: float,
+) -> tuple[pd.DataFrame, bool]:
+    """Build a minimal pydeck payload — never send the full collision_view to the browser."""
+    alpha = max(1, min(255, int(marker_opacity * 255)))
+    labels = _severity_labels(map_geo, sev_col)
+    slim = pd.DataFrame(
+        {
+            "longitude": pd.to_numeric(map_geo["longitude"], errors="coerce"),
+            "latitude": pd.to_numeric(map_geo["latitude"], errors="coerce"),
+            "severity_label": labels.astype(str),
+        }
+    )
+    if "collision_index" in map_geo.columns:
+        slim["collision_index"] = map_geo["collision_index"].astype("string")
+    if "date" in map_geo.columns:
+        slim["date"] = pd.to_datetime(map_geo["date"], errors="coerce").dt.strftime("%Y-%m-%d")
+
+    slim = slim.dropna(subset=["longitude", "latitude"]).reset_index(drop=True)
+    slim["color"] = slim["severity_label"].map(
+        lambda label: _hex_to_rgba(SEVERITY_COLORS.get(str(label), COLORS["accent"]), alpha)
+    )
+
+    sampled = False
+    if is_snowflake_streamlit() and len(slim) > SNOWFLAKE_PYDECK_POINT_CAP:
+        slim = _sample_points_stratified(slim, SNOWFLAKE_PYDECK_POINT_CAP)
+        sampled = True
+
+    slim["longitude"] = slim["longitude"].astype("float32")
+    slim["latitude"] = slim["latitude"].astype("float32")
+    return slim, sampled
 
 
 def _render_georisk_legend() -> None:
@@ -114,14 +170,14 @@ def _render_pydeck_map(
 ) -> None:
     import pydeck as pdk
 
-    alpha = max(1, min(255, int(marker_opacity * 255)))
-    labels = _severity_labels(map_geo, sev_col)
-    points = map_geo.assign(severity_label=labels)
-    if "date" in points.columns:
-        points["date"] = pd.to_datetime(points["date"], errors="coerce").dt.strftime("%Y-%m-%d")
-    points["color"] = points["severity_label"].map(
-        lambda label: _hex_to_rgba(SEVERITY_COLORS.get(str(label), COLORS["accent"]), alpha)
+    points, sampled = _prepare_pydeck_points(
+        map_geo,
+        sev_col=sev_col,
+        marker_opacity=marker_opacity,
     )
+    if points.empty:
+        st.warning("No geocoded collisions available to plot on the map.")
+        return
 
     tooltip_lines = ["<b>{severity_label}</b>"]
     if "collision_index" in points.columns:
@@ -162,6 +218,11 @@ def _render_pydeck_map(
         },
     )
     st.subheader(f"Collision hotspots — last 12 months ({point_count:,} points)")
+    if sampled:
+        st.caption(
+            f"Showing **{len(points):,}** of **{point_count:,}** map points on Snowflake "
+            f"(32 MB browser limit). District table below uses all **{point_count:,}** points."
+        )
     _render_georisk_legend()
     _render_pydeck_chart(deck)
 
